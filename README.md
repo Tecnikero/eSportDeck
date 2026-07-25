@@ -1,4 +1,4 @@
-#eSports Deck (en Progreso)
+# eSports Deck (en Progreso)
 
 ![Flutter](https://img.shields.io/badge/Made_with-Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Backend-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
