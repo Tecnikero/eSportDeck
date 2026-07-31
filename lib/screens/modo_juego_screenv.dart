@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'partida_rapida_screenv.dart';
+import 'partida_completa_screenv.dart';
 
 // ---------- TEMA ARENA (rojo / negro), igual que Partida Rápida ----------
 const Color _kFondo = Color(0xFF0A0A0A);
@@ -61,7 +62,11 @@ class ModoJuegoScreen extends StatelessWidget {
                 titulo: 'PARTIDA COMPLETA',
                 subtitulo: 'Simulación real a 13 rondas · eventos en vivo',
                 icono: Icons.stadium,
-                activo: false,
+                activo: true,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const PartidaCompletaScreen()),
+                ),
               ),
               const SizedBox(height: 16),
 

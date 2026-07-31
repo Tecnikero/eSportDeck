@@ -4,6 +4,7 @@ import 'coleccion_screenv.dart';
 import 'tienda_screenv.dart';
 import 'modo_juego_screenv.dart';
 import '../providers/perfil_provider.dart';
+import '../widgets/racha_dialog.dart';
 
 class MainNavScreen extends StatefulWidget {
   const MainNavScreen({super.key});
@@ -18,8 +19,10 @@ class _MainNavScreenState extends State<MainNavScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PerfilProvider>().cargar();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await context.read<PerfilProvider>().cargar();
+      if (!mounted) return;
+      await mostrarRachaDiariaSiCorresponde(context);
     });
   }
 

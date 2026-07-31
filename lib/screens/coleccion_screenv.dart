@@ -72,7 +72,7 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
 
     final inventarioId = carta['_inventario_id'];
     final cantidadActual = carta['_cantidad'] as int;
-    final precioVenta = 50;
+    final precioVenta = _precioVenta(carta);
 
     try {
       if (cantidadActual > 1) {
@@ -115,9 +115,26 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
     }
   }
 
+  // ---------- PRECIOS DE VENTA RÁPIDA (por rareza) ----------
+  // Las bandas de OVR coinciden con las probabilidades de los sobres:
+  // Común 0-80 · Rara 81-88 · Épica 89-91 · Legendaria 92-99.
+  static const Map<String, int> _precioVentaPorRareza = {
+    'comun': 100,
+    'rara': 250,
+    'epica': 300,
+    'legendaria': 500,
+  };
+
+  String _rarezaPorOvr(num ovr) {
+    if (ovr >= 92) return 'legendaria';
+    if (ovr >= 89) return 'epica';
+    if (ovr >= 81) return 'rara';
+    return 'comun';
+  }
+
   int _precioVenta(Map<String, dynamic> jugador) {
-    final ovr = (jugador['ovr'] ?? 50) as num;
-    return (ovr * 5).round();
+    final ovr = (jugador['ovr'] ?? 0) as num;
+    return _precioVentaPorRareza[_rarezaPorOvr(ovr)] ?? 100;
   }
 
   

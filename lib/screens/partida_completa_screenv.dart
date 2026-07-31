@@ -6,6 +6,7 @@ import '../widgets/carta_widget.dart';
 
 const List<String> _rolesPrincipales = ['DUE', 'INI', 'CON', 'CEN'];
 
+// ---------- TEMA ARENA (mismo look que Partida Rápida) ----------
 const Color _kFondo = Color(0xFF0A0A0A);
 const Color _kFondoPanel = Color(0xFF1A0E0E);
 const Color _kRojo = Color(0xFFE30425);
@@ -13,9 +14,8 @@ const Color _kRojoOscuro = Color(0xFF7A0000);
 const Color _kDorado = Color(0xFFFFD700);
 const Color _kTextoSuave = Color(0xFFB9B4B4);
 const Color _kBorde = Color(0x33FFFFFF);
+const Color _kAzulEvento = Color(0xFF3AA7FF);
 
-/// Contenedor base reutilizado por todas las tarjetas de esta pantalla,
-/// para que la interfaz se vea consistente y simple.
 class _Tarjeta extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -42,7 +42,6 @@ class _Tarjeta extends StatelessWidget {
   }
 }
 
-/// Encabezado simple y reutilizable: ícono + título + subtítulo opcional.
 class _Encabezado extends StatelessWidget {
   final IconData icono;
   final String titulo;
@@ -89,12 +88,12 @@ class _Encabezado extends StatelessWidget {
   }
 }
 
-/// Botón principal reutilizado por las tres pantallas de esta vista.
 class _BotonPrincipal extends StatelessWidget {
   final String texto;
   final VoidCallback? onPressed;
+  final Color color;
 
-  const _BotonPrincipal({required this.texto, required this.onPressed});
+  const _BotonPrincipal({required this.texto, required this.onPressed, this.color = _kRojo});
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +103,7 @@ class _BotonPrincipal extends StatelessWidget {
       height: 54,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: _kRojo,
+          backgroundColor: color,
           disabledBackgroundColor: Colors.white12,
           elevation: activo ? 4 : 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -126,7 +125,7 @@ class _BotonPrincipal extends StatelessWidget {
 
 const List<String> _eventosPositivos = [
   '{jugador} consiguió un 3K',
-  '{jugador} clucheó la ronda en 1v2',
+  '{jugador} clucheó la ronda',
   '{jugador} plantó la spike bajo presión',
   '{jugador} abrió el sitio con el primer pick',
   '{jugador} rotó a tiempo y ganó el retake',
@@ -145,63 +144,24 @@ const List<String> _eventosNegativos = [
   '{jugador} no llegó a tiempo al sitio',
 ];
 
-enum _FaseJuego { draft, agentes, simulando, resultado }
+enum _FaseJuego { draft, simulando, resultado }
 
-const Map<String, List<String>> _agentesPorRol = {
-  'DUE': ['Jett', 'Reyna', 'Phoenix', 'Raze', 'Yoru', 'Neon', 'Iso'],
-  'INI': ['Sova', 'Breach', 'Skye', 'KAY/O', 'Fade', 'Gekko'],
-  'CON': ['Omen', 'Brimstone', 'Viper', 'Astra', 'Harbor', 'Clove'],
-  'CEN': ['Killjoy', 'Cypher', 'Sage', 'Chamber', 'Deadlock', 'Vyse'],
-};
-
-const Map<String, List<String>> _agentesFuertesPorMapa = {
-  'Abyss': ['Gekko', 'Omen', 'Killjoy', 'Sova'],
-  'Ascent': ['Jett', 'Omen', 'Killjoy', 'Fade'],
-  'Bind': ['Raze', 'Brimstone', 'Cypher', 'Skye'],
-  'Breeze': ['Viper', 'Sova', 'Jett', 'Chamber'],
-  'Corrode': ['Vyse', 'Sova', 'Omen', 'Breach'],
-  'Fracture': ['Raze', 'Breach', 'KAY/O', 'Cypher'],
-  'Haven': ['Breach', 'Astra', 'KAY/O', 'Sova'],
-  'Lotus': ['Viper', 'Killjoy', 'Neon', 'Gekko'],
-  'Pearl': ['Viper', 'Astra', 'Cypher', 'Fade'],
-  'Split': ['Raze', 'Cypher', 'Breach', 'Omen'],
-  'Summit': ['Omen', 'Sova', 'Jett', 'Killjoy'],
-  'Sunset': ['Jett', 'Astra', 'Killjoy', 'Fade'],
-  'Icebox': ['Sova', 'Viper', 'Chamber', 'Skye'],
-};
-
-const List<Map<String, String>> _mapasValorant = [
-  {'nombre': 'Abyss', 'imagen': 'assets/valorant/mapas/abyss.png'},
-  {'nombre': 'Ascent', 'imagen': 'assets/valorant/mapas/ascent.png'},
-  {'nombre': 'Bind', 'imagen': 'assets/valorant/mapas/bind.png'},
-  {'nombre': 'Breeze', 'imagen': 'assets/valorant/mapas/breeze.png'},
-  {'nombre': 'Corrode', 'imagen': 'assets/valorant/mapas/corrode.png'},
-  {'nombre': 'Fracture', 'imagen': 'assets/valorant/mapas/fracture.png'},
-  {'nombre': 'Haven', 'imagen': 'assets/valorant/mapas/haven.png'},
-  {'nombre': 'Icebox', 'imagen': 'assets/valorant/mapas/icebox.png'},
-  {'nombre': 'Lotus', 'imagen': 'assets/valorant/mapas/lotus.png'},
-  {'nombre': 'Pearl', 'imagen': 'assets/valorant/mapas/pearl.png'},
-  {'nombre': 'Split', 'imagen': 'assets/valorant/mapas/split.png'},
-  {'nombre': 'Summit', 'imagen': 'assets/valorant/mapas/summit.png'},
-  {'nombre': 'Sunset', 'imagen': 'assets/valorant/mapas/sunset.png'},
-];
-
-class PartidaRapidaScreen extends StatefulWidget {
-  const PartidaRapidaScreen({super.key});
+class PartidaCompletaScreen extends StatefulWidget {
+  const PartidaCompletaScreen({super.key});
 
   @override
-  State<PartidaRapidaScreen> createState() => _PartidaRapidaScreenState();
+  State<PartidaCompletaScreen> createState() => _PartidaCompletaScreenState();
 }
 
-class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
+class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
   final supabase = Supabase.instance.client;
   final _random = Random();
 
   _FaseJuego _fase = _FaseJuego.draft;
   String? _error;
 
-  final List<Map<String, dynamic>?> _casillas =
-      List<Map<String, dynamic>?>.filled(5, null);
+  // ---------- DRAFT ----------
+  final List<Map<String, dynamic>?> _casillas = List<Map<String, dynamic>?>.filled(5, null);
   bool _revelando = false;
   int? _casillaEnRevelacion;
   List<Map<String, dynamic>> _opcionesActuales = [];
@@ -210,24 +170,27 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
       _casillas.whereType<Map<String, dynamic>>().toList();
 
   List<Map<String, dynamic>> _rosterRival = [];
-  Map<String, String>? _mapaActual;
 
-  final List<String?> _agentesAsignados = List<String?>.filled(5, null);
-  int _bonoSinergia = 0;
-
-  static const int _rondasParaGanar = 5;
+  // ---------- PARTIDA ----------
+  static const int _rondasParaGanar = 13;
   int _rondasJugador = 0;
   int _rondasIA = 0;
   int _rondaActual = 0;
   final List<bool> _historialRondas = [];
   final List<Map<String, dynamic>> _timelineEventos = [];
   bool _resolviendoRonda = false;
-
   Map<String, dynamic>? _rondaEnVivo;
+  bool _enProrroga = false;
+
+  // Estado pendiente entre rondas para la decisión económica.
+  final Map<int, bool> _resultadoForzado = {};
+  bool _penalizacionRonda3 = false;
 
   bool _victoria = false;
   int _monedasGanadas = 0;
   Map<String, dynamic>? _mvp;
+
+  // ================= DRAFT (idéntico en espíritu a Partida Rápida) =================
 
   Future<void> _abrirCasilla(int index) async {
     if (_casillas[index] != null || _revelando) return;
@@ -261,7 +224,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
       if (!mounted) return;
       await _mostrarSelectorCartas(index);
     } catch (e) {
-      debugPrint('ERROR AL REVELAR CASILLA: $e');
+      debugPrint('ERROR AL REVELAR CASILLA (partida completa): $e');
       if (!mounted) return;
       setState(() {
         _revelando = false;
@@ -297,26 +260,11 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     Navigator.of(context).pop();
   }
 
-  void _reiniciarDraft() {
-    setState(() {
-      for (var i = 0; i < _casillas.length; i++) {
-        _casillas[i] = null;
-      }
-      _error = null;
-    });
-  }
-
   // ---------- QUÍMICA ----------
 
   String _rol(Map<String, dynamic> j) => '${j['posicion'] ?? ''}'.trim().toUpperCase();
   String _region(Map<String, dynamic> j) => '${j['region'] ?? ''}'.trim().toLowerCase();
   String _equipo(Map<String, dynamic> j) => '${j['equipo'] ?? ''}'.trim().toLowerCase();
-
-  bool get _balanceDeRoles {
-    if (_seleccionados.length < 4) return false;
-    final rolesPresentes = _seleccionados.map(_rol).toSet();
-    return _rolesPrincipales.every(rolesPresentes.contains);
-  }
 
   int _quimicaEnRoster(Map<String, dynamic> carta, List<Map<String, dynamic>> roster) {
     var puntos = 0;
@@ -372,28 +320,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     return racha;
   }
 
-  int _bonificacionSinergia() {
-    final mapa = _mapaActual;
-    if (mapa == null) return 0;
-    final buenos = _agentesFuertesPorMapa[mapa['nombre']] ?? const <String>[];
-    var puntos = 0;
-    for (final agente in _agentesAsignados) {
-      if (agente != null && buenos.contains(agente)) puntos += 1;
-    }
-    return puntos;
-  }
-
-  bool _esBuenPick(String? agente) {
-    final mapa = _mapaActual;
-    if (agente == null || mapa == null) return false;
-    return (_agentesFuertesPorMapa[mapa['nombre']] ?? const <String>[]).contains(agente);
-  }
-
-  String _rutaAgente(String agente) {
-    final archivo = agente.toLowerCase().replaceAll('/', '').replaceAll(' ', '_');
-    return 'assets/valorant/agentes/$archivo.png';
-  }
-
   Future<List<Map<String, dynamic>>> _generarRivalIA() async {
     final catalogo = await supabase.from('jugadores').select();
     var pool = List<Map<String, dynamic>>.from(catalogo as List);
@@ -404,9 +330,17 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     return pool.take(5).toList();
   }
 
+  // ================= LÓGICA DE LA PARTIDA (13 rondas + prórroga) =================
+
+  bool _partidaTerminada() {
+    if (_rondasJugador >= 12 && _rondasIA >= 12) {
+      return (_rondasJugador - _rondasIA).abs() >= 2;
+    }
+    return _rondasJugador == _rondasParaGanar || _rondasIA == _rondasParaGanar;
+  }
+
   Future<void> _jugarPartida() async {
     if (_seleccionados.length != 5) return;
-    if (_agentesAsignados.any((a) => a == null)) return;
 
     setState(() {
       _error = null;
@@ -417,45 +351,124 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
       _historialRondas.clear();
       _timelineEventos.clear();
       _rondaEnVivo = null;
-      _bonoSinergia = _bonificacionSinergia();
+      _enProrroga = false;
+      _resultadoForzado.clear();
+      _penalizacionRonda3 = false;
     });
 
     try {
       _rosterRival = await _generarRivalIA();
 
-      // La IA ahora "compensa" parte de la ventaja de química/sinergia del
-      // jugador (simula que el rival también tiene coordinación de equipo),
-      // y el azar por ronda tiene más peso. Esto baja el % de victoria del
-      // jugador sin tocar el draft, la química ni la asignación de agentes.
       final quimicaJugador = _ratingEfectivo(_seleccionados, conQuimica: true) -
           _ratingEfectivo(_seleccionados, conQuimica: false);
-      final ratingPropio = _ratingEfectivo(_seleccionados, conQuimica: true) + _bonoSinergia;
-      final ratingRival = _ratingEfectivo(_rosterRival, conQuimica: false) +
-          (quimicaJugador * 0.45) +
-          (_bonoSinergia * 0.35);
+      final ratingPropioBase = _ratingEfectivo(_seleccionados, conQuimica: true);
+      final ratingRivalBase =
+          _ratingEfectivo(_rosterRival, conQuimica: false) + (quimicaJugador * 0.45);
 
-      while (_rondasJugador < _rondasParaGanar && _rondasIA < _rondasParaGanar) {
+      while (!_partidaTerminada()) {
         final numeroRonda = _rondaActual + 1;
+        final enProrrogaAhora = _rondasJugador >= 12 && _rondasIA >= 12;
 
         setState(() {
           _rondaActual = numeroRonda;
           _resolviendoRonda = true;
+          _enProrroga = enProrrogaAhora;
           _rondaEnVivo = {'ronda': numeroRonda, 'lineas': <String>[]};
         });
 
-        final rachaJugador = _rachaActual(true);
-        final rachaRival = _rachaActual(false);
-        final momentumJugador = rachaJugador >= 3 ? 1 : (rachaRival >= 3 ? -1 : 0);
-        final momentumRival = rachaRival >= 3 ? 1 : (rachaJugador >= 3 ? -1 : 0);
+        double modificadorPropio = 0;
+        String? lineaEvento;
+        bool? resultadoForzadoManual;
 
-        final miPuntaje = ratingPropio + momentumJugador + (_random.nextInt(19) - 9);
-        final rivalPuntaje = ratingRival + momentumRival + (_random.nextInt(19) - 9);
+        // ---------- Decisión Económica: ronda 2 tras ganar la pistola ----------
+        if (numeroRonda == 2 && _historialRondas.isNotEmpty && _historialRondas[0] == true) {
+          final decision = await _mostrarDecisionEconomica();
+          if (decision == 'forzar') {
+            final exito = _random.nextDouble() < 0.70;
+            resultadoForzadoManual = exito;
+            if (!exito) _penalizacionRonda3 = true;
+            lineaEvento = exito
+                ? 'Compra forzada: el equipo se arriesgó y la jugada salió perfecta.'
+                : 'Compra forzada: el armamento a medias no fue suficiente.';
+          } else if (decision == 'eco') {
+            resultadoForzadoManual = false;
+            _resultadoForzado[3] = true;
+            lineaEvento = 'Eco: se sacrificó la ronda para asegurar la número 3 con full-buy.';
+          }
+        }
+        // ---------- Consecuencias pendientes sobre la ronda 3 ----------
+        else if (numeroRonda == 3 && _resultadoForzado.containsKey(3)) {
+          resultadoForzadoManual = _resultadoForzado[3];
+          lineaEvento = 'El full-buy del eco se sintió: equipo completo y confiado.';
+        } else if (numeroRonda == 3 && _penalizacionRonda3) {
+          final derrota = _random.nextDouble() < 0.80;
+          resultadoForzadoManual = !derrota;
+          _penalizacionRonda3 = false;
+          lineaEvento = derrota
+              ? 'El golpe económico del force pasó la cuenta: ronda perdida con poco armamento.'
+              : 'Contra todo pronóstico, el equipo remontó con lo justo.';
+        }
+        // ---------- Duelo 1v1: adivinar el AIM oculto ----------
+        else if (numeroRonda != 1 && numeroRonda != 13 && _random.nextDouble() < 0.30) {
+          final resultado = await _mostrarDueloAim();
+          if (resultado != null) {
+            modificadorPropio += resultado;
+            lineaEvento = resultado >= 3
+                ? '¡Jugada táctica por la espalda! El duelo se ganó como el claro underdog.'
+                : (resultado > 0
+                    ? 'El duelo 1v1 se leyó correctamente.'
+                    : 'La apuesta del duelo 1v1 no se cumplió.');
+          }
+        }
+        // ---------- Clutch 1vX: la estadística CLU queda oculta ----------
+        else if (_rachaActual(false) >= 2 && _random.nextDouble() < 0.45) {
+          final resultado = await _mostrarClutch();
+          if (resultado != null) {
+            modificadorPropio += resultado;
+            lineaEvento = resultado > 0
+                ? '¡Clutch leído a la perfección! Cayó primero el rival más débil.'
+                : 'La lectura del clutch falló: se enfrentó primero al rival equivocado.';
+          }
+        }
+        // ---------- Anti-Eco: el rival viene de una mala racha económica ----------
+        else if (_rachaActual(true) >= 2 && _random.nextDouble() < 0.35) {
+          final resultado = await _mostrarAntiEco();
+          if (resultado != null) {
+            modificadorPropio += resultado;
+            lineaEvento = resultado >= 3
+                ? '¡Rush perfecto al anti-eco! El rival no tuvo tiempo de reaccionar.'
+                : (resultado > 0
+                    ? 'Se jugó con calma y se cerró la ronda sin sobresaltos.'
+                    : 'El rush salió mal: el rival defendió mejor de lo esperado.');
+          }
+        }
+        // ---------- Momento Ace: racha caliente propia ----------
+        else if (_rachaActual(true) >= 3 && _random.nextDouble() < 0.30) {
+          final resultado = await _mostrarMomentoAce();
+          if (resultado != null) {
+            modificadorPropio += resultado;
+            lineaEvento = resultado >= 4
+                ? '¡ACE! El jugador en racha cerró la ronda él solo.'
+                : (resultado > 0
+                    ? 'Se jugó seguro y se cerró la ronda sin arriesgar de más.'
+                    : 'La búsqueda del ace terminó exponiendo al equipo.');
+          }
+        }
 
         bool ganeLaRonda;
-        if (miPuntaje == rivalPuntaje) {
-          ganeLaRonda = _random.nextBool();
+        if (resultadoForzadoManual != null) {
+          ganeLaRonda = resultadoForzadoManual;
         } else {
-          ganeLaRonda = miPuntaje > rivalPuntaje;
+          final rachaJugador = _rachaActual(true);
+          final rachaRival = _rachaActual(false);
+          final momentumJugador = rachaJugador >= 3 ? 1 : (rachaRival >= 3 ? -1 : 0);
+          final momentumRival = rachaRival >= 3 ? 1 : (rachaJugador >= 3 ? -1 : 0);
+
+          final miPuntaje =
+              ratingPropioBase + momentumJugador + modificadorPropio + (_random.nextInt(19) - 9);
+          final rivalPuntaje = ratingRivalBase + momentumRival + (_random.nextInt(19) - 9);
+
+          ganeLaRonda = miPuntaje == rivalPuntaje ? _random.nextBool() : miPuntaje > rivalPuntaje;
         }
 
         final equipoGanador = ganeLaRonda ? _seleccionados : _rosterRival;
@@ -467,19 +480,25 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
         final lineaCaido =
             _eventosNegativos[_random.nextInt(_eventosNegativos.length)].replaceAll('{jugador}', caido);
 
-        await Future.delayed(const Duration(milliseconds: 700));
+        final lineasRonda = [
+          if (lineaEvento != null) lineaEvento,
+          lineaHeroe,
+          lineaCaido,
+        ];
+
+        await Future.delayed(const Duration(milliseconds: 500));
         if (!mounted) return;
         setState(() {
-          _rondaEnVivo = {'ronda': numeroRonda, 'lineas': [lineaHeroe]};
+          _rondaEnVivo = {'ronda': numeroRonda, 'lineas': lineasRonda.take(1).toList()};
         });
 
-        await Future.delayed(const Duration(milliseconds: 900));
+        await Future.delayed(const Duration(milliseconds: 650));
         if (!mounted) return;
         setState(() {
-          _rondaEnVivo = {'ronda': numeroRonda, 'lineas': [lineaHeroe, lineaCaido]};
+          _rondaEnVivo = {'ronda': numeroRonda, 'lineas': lineasRonda};
         });
 
-        await Future.delayed(const Duration(milliseconds: 700));
+        await Future.delayed(const Duration(milliseconds: 550));
         if (!mounted) return;
 
         setState(() {
@@ -489,7 +508,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
           _timelineEventos.add({
             'ronda': numeroRonda,
             'gano': ganeLaRonda,
-            'lineas': [lineaHeroe, lineaCaido],
+            'lineas': lineasRonda,
+            'prorroga': enProrrogaAhora,
           });
           if (ganeLaRonda) {
             _rondasJugador += 1;
@@ -498,7 +518,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
           }
         });
 
-        await Future.delayed(const Duration(milliseconds: 1000));
+        await Future.delayed(const Duration(milliseconds: 550));
         if (!mounted) return;
       }
 
@@ -511,7 +531,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
           return ratingB.compareTo(ratingA);
         });
 
-      final monedas = victoria ? 150 : 50;
+      final monedas = victoria ? (400 + (_rondaActual * 3)) : (140 + _rondaActual);
       await _pagarMonedas(monedas);
 
       if (!mounted) return;
@@ -522,7 +542,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
         _fase = _FaseJuego.resultado;
       });
     } catch (e) {
-      debugPrint('ERROR EN PARTIDA RÁPIDA: $e');
+      debugPrint('ERROR EN PARTIDA COMPLETA: $e');
       if (!mounted) return;
       setState(() {
         _error = 'No se pudo completar la partida.';
@@ -539,148 +559,71 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
       final actual = (perfil['dinero'] ?? 0) as int;
       await supabase.from('profiles').update({'dinero': actual + cantidad}).eq('id', userId);
     } catch (e) {
-      debugPrint('ERROR AL PAGAR MONEDAS DE PARTIDA RÁPIDA: $e');
+      debugPrint('ERROR AL PAGAR MONEDAS DE PARTIDA COMPLETA: $e');
     }
   }
 
-  void _irAAsignarAgentes() {
-    if (_seleccionados.length != 5) return;
+  void _jugarDeNuevo() {
     setState(() {
-      _mapaActual = _mapasValorant[_random.nextInt(_mapasValorant.length)];
-      for (var i = 0; i < _agentesAsignados.length; i++) {
-        _agentesAsignados[i] = null;
+      for (var i = 0; i < _casillas.length; i++) {
+        _casillas[i] = null;
       }
-      _fase = _FaseJuego.agentes;
+      _rosterRival = [];
+      _timelineEventos.clear();
+      _rondaEnVivo = null;
+      _enProrroga = false;
+      _fase = _FaseJuego.draft;
     });
   }
 
-  Future<void> _mostrarSelectorAgente(int index) async {
-    final carta = _casillas[index];
-    if (carta == null) return;
-    final rol = _rol(carta);
-    final agentesDelRol = _agentesPorRol[rol] ??
-        _agentesPorRol.values.expand((lista) => lista).toList();
+  // ================= EVENTOS EN VIVO =================
 
-    final usadosPorOtros = <String>{
-      for (var i = 0; i < _agentesAsignados.length; i++)
-        if (i != index && _agentesAsignados[i] != null) _agentesAsignados[i]!
-    };
-    final agentes = agentesDelRol.where((a) => !usadosPorOtros.contains(a)).toList();
-
-    final nombreMapa = _mapaActual?['nombre'] ?? '';
-
-    await showModalBottomSheet<void>(
+  /// Ronda 2 tras ganar la pistola: Forzar (70% éxito) o Eco (asegura ronda 3).
+  Future<String?> _mostrarDecisionEconomica() {
+    return showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 30),
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
           decoration: BoxDecoration(
             color: _kFondoPanel,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(color: _kRojo, width: 1.5),
+            border: Border.all(color: _kDorado, width: 1.5),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.person_pin_circle, color: _kRojo, size: 26),
-              const SizedBox(height: 6),
-              Text(
-                'AGENTE PARA ${'${carta['nombre'] ?? ''}'.toUpperCase()}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 15,
-                  letterSpacing: 1.0,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Rol: $rol  ·  Mapa: $nombreMapa',
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+              const Icon(Icons.monetization_on, color: _kDorado, size: 30),
+              const SizedBox(height: 8),
+              const Text(
+                'GANASTE LA PISTOLA',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.0),
               ),
               const SizedBox(height: 6),
               const Text(
-                '⭐ = comfort pick para este mapa (+1 táctico oculto)',
-                style: TextStyle(color: _kDorado, fontSize: 11),
+                '¿Cómo administras la economía para la ronda 2?',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _kTextoSuave, fontSize: 12.5),
               ),
-              const SizedBox(height: 16),
-              if (agentes.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12.0),
-                  child: Text(
-                    'No quedan agentes de este rol disponibles: ya están asignados a otros jugadores.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white54, fontSize: 12.5),
-                  ),
-                )
-              else
-                Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 14,
-                runSpacing: 14,
-                children: agentes.map((agente) {
-                  final esBueno = _esBuenPick(agente);
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() => _agentesAsignados[index] = agente);
-                      Navigator.of(context).pop();
-                    },
-                    child: SizedBox(
-                      width: 70,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 62,
-                            height: 62,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _kFondo,
-                              border: Border.all(
-                                color: esBueno ? _kDorado : Colors.white24,
-                                width: esBueno ? 2.5 : 1.5,
-                              ),
-                              boxShadow: esBueno
-                                  ? [BoxShadow(color: _kDorado.withOpacity(0.5), blurRadius: 8)]
-                                  : null,
-                            ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                _rutaAgente(agente),
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => const Icon(
-                                  Icons.person,
-                                  color: Colors.white38,
-                                  size: 28,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          if (esBueno)
-                            const Padding(
-                              padding: EdgeInsets.only(bottom: 2.0),
-                              child: Icon(Icons.star, color: _kDorado, size: 12),
-                            ),
-                          Text(
-                            agente,
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: esBueno ? _kDorado : Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
+              const SizedBox(height: 18),
+              _opcionEvento(
+                icono: Icons.bolt,
+                color: _kRojo,
+                titulo: 'FORZAR COMPRA',
+                subtitulo: '70% de ganar la ronda 2 ahora mismo.\nSi falla, la ronda 3 queda muy comprometida.',
+                onTap: () => Navigator.of(context).pop('forzar'),
+              ),
+              const SizedBox(height: 12),
+              _opcionEvento(
+                icono: Icons.savings,
+                color: _kAzulEvento,
+                titulo: 'HACER ECO',
+                subtitulo: 'Se pierde la ronda 2 a propósito,\npero la ronda 3 queda asegurada con full-buy.',
+                onTap: () => Navigator.of(context).pop('eco'),
               ),
             ],
           ),
@@ -689,28 +632,336 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     );
   }
 
-  void _jugarDeNuevo() {
-    setState(() {
-      for (var i = 0; i < _casillas.length; i++) {
-        _casillas[i] = null;
-      }
-      for (var i = 0; i < _agentesAsignados.length; i++) {
-        _agentesAsignados[i] = null;
-      }
-      _rosterRival = [];
-      _bonoSinergia = 0;
-      _timelineEventos.clear();
-      _rondaEnVivo = null;
-      _fase = _FaseJuego.draft;
-    });
+  /// Duelo 1v1 con AIM oculto. Devuelve el modificador de puntaje para la ronda.
+  Future<double?> _mostrarDueloAim() async {
+    if (_seleccionados.isEmpty || _rosterRival.isEmpty) return null;
+    final nuestro = _seleccionados[_random.nextInt(_seleccionados.length)];
+    final rival = _rosterRival[_random.nextInt(_rosterRival.length)];
+
+    final aimNuestro = ((nuestro['aim'] ?? 50) as num).toDouble();
+    final aimRival = ((rival['aim'] ?? 50) as num).toDouble();
+    final ruido = _random.nextDouble() * 14 - 7;
+    final ganaNuestro = (aimNuestro + ruido) >= aimRival;
+
+    final elegido = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
+          decoration: BoxDecoration(
+            color: _kFondoPanel,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: _kAzulEvento, width: 1.5),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.gps_fixed, color: _kAzulEvento, size: 28),
+              const SizedBox(height: 8),
+              const Text(
+                'DUELO 1v1',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.0),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'El AIM de ambos está oculto. ¿Quién gana el duelo?\nAcertar con la carta inferior activa una jugada por la espalda.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _kTextoSuave, fontSize: 12.5),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _duelistaOculto('${nuestro['nombre'] ?? 'Nuestro'}', _kDorado,
+                      () => Navigator.of(context).pop('nuestro')),
+                  const Text('VS', style: TextStyle(color: Colors.white38, fontWeight: FontWeight.bold)),
+                  _duelistaOculto('${rival['nombre'] ?? 'Rival'}', _kRojo,
+                      () => Navigator.of(context).pop('rival')),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (elegido == null) return 0;
+    final acerto = (elegido == 'nuestro' && ganaNuestro) || (elegido == 'rival' && !ganaNuestro);
+    if (!acerto) return -1.5;
+    if (elegido == 'nuestro' && aimNuestro < aimRival) return 3.5;
+    return 1.2;
   }
+
+  Widget _duelistaOculto(String nombre, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 78,
+            height: 78,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _kFondo,
+              border: Border.all(color: color, width: 2),
+            ),
+            child: Icon(Icons.lock_outline, color: color, size: 28),
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            width: 90,
+            child: Text(
+              nombre,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Clutch 1vX con CLU oculto. Devuelve el modificador de puntaje.
+  Future<double?> _mostrarClutch() async {
+    final numRivales = _random.nextBool() ? 2 : 3;
+    final fuerzas = List.generate(numRivales, (_) => _random.nextDouble());
+    final indiceMasDebil = fuerzas.indexOf(fuerzas.reduce(min));
+
+    final eleccion = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
+          decoration: BoxDecoration(
+            color: _kFondoPanel,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: _kRojo, width: 1.5),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.warning_amber_rounded, color: _kRojo, size: 30),
+              const SizedBox(height: 8),
+              Text(
+                'CLUTCH 1v$numRivales',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.0),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'La estadística CLUTCH de los rivales está oculta.\n¿A cuál enfrentas primero?',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _kTextoSuave, fontSize: 12.5),
+              ),
+              const SizedBox(height: 18),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 14,
+                runSpacing: 14,
+                children: List.generate(numRivales, (i) {
+                  final letra = String.fromCharCode(65 + i);
+                  return GestureDetector(
+                    onTap: () => Navigator.of(context).pop(i),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 66,
+                          height: 66,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _kFondo,
+                            border: Border.all(color: _kRojo, width: 2),
+                          ),
+                          child: const Icon(Icons.person, color: Colors.white54, size: 28),
+                        ),
+                        const SizedBox(height: 6),
+                        Text('Rival $letra',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ],
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (eleccion == null) return 0;
+    return eleccion == indiceMasDebil ? 2.2 : -1.0;
+  }
+
+  /// Rival viene de mala economía: Rushear (alto riesgo) o jugar con calma.
+  Future<double?> _mostrarAntiEco() {
+    return showModalBottomSheet<double>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
+          decoration: BoxDecoration(
+            color: _kFondoPanel,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: _kAzulEvento, width: 1.5),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.speed, color: _kAzulEvento, size: 28),
+              const SizedBox(height: 8),
+              const Text(
+                'LECTURA DE ANTI-ECO',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.0),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'El rival viene de una mala racha económica. ¿Cómo lo aprovechas?',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _kTextoSuave, fontSize: 12.5),
+              ),
+              const SizedBox(height: 18),
+              _opcionEvento(
+                icono: Icons.flash_on,
+                color: _kRojo,
+                titulo: 'RUSHEAR EL SITIO',
+                subtitulo: 'Alto riesgo: si sale bien, ventaja grande.\nSi sale mal, el equipo queda expuesto.',
+                onTap: () => Navigator.of(context).pop(_random.nextDouble() < 0.65 ? 3.2 : -2.0),
+              ),
+              const SizedBox(height: 12),
+              _opcionEvento(
+                icono: Icons.shield_moon,
+                color: _kAzulEvento,
+                titulo: 'JUGAR CON CALMA',
+                subtitulo: 'Ventaja pequeña pero garantizada.',
+                onTap: () => Navigator.of(context).pop(0.8),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Racha caliente propia: buscar el ace o cerrar la ronda seguro.
+  Future<double?> _mostrarMomentoAce() {
+    return showModalBottomSheet<double>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
+          decoration: BoxDecoration(
+            color: _kFondoPanel,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: _kDorado, width: 1.5),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.local_fire_department, color: _kDorado, size: 30),
+              const SizedBox(height: 8),
+              const Text(
+                'MOMENTO CALIENTE',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.0),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'El equipo está en racha. ¿Buscas el ace o cierras la ronda seguro?',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _kTextoSuave, fontSize: 12.5),
+              ),
+              const SizedBox(height: 18),
+              _opcionEvento(
+                icono: Icons.emoji_events,
+                color: _kDorado,
+                titulo: 'BUSCAR EL ACE',
+                subtitulo: '50% de gloria total, 50% de quedar expuesto.',
+                onTap: () => Navigator.of(context).pop(_random.nextDouble() < 0.5 ? 4.2 : -2.0),
+              ),
+              const SizedBox(height: 12),
+              _opcionEvento(
+                icono: Icons.check_circle_outline,
+                color: _kAzulEvento,
+                titulo: 'CERRAR SEGURO',
+                subtitulo: 'Ventaja pequeña pero garantizada.',
+                onTap: () => Navigator.of(context).pop(0.8),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _opcionEvento({
+    required IconData icono,
+    required Color color,
+    required String titulo,
+    required String subtitulo,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _kFondo,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withOpacity(0.6)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
+              child: Icon(icono, color: color, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(titulo,
+                      style: TextStyle(
+                          color: color, fontWeight: FontWeight.w900, fontSize: 13.5, letterSpacing: 0.6)),
+                  const SizedBox(height: 3),
+                  Text(subtitulo, style: const TextStyle(color: Colors.white70, fontSize: 11.5, height: 1.25)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ================= UI =================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _kFondo,
       appBar: AppBar(
-        title: const Text('PARTIDA RÁPIDA',
+        title: const Text('PARTIDA COMPLETA',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -723,7 +974,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
       body: SafeArea(
         child: switch (_fase) {
           _FaseJuego.draft => _buildDraft(),
-          _FaseJuego.agentes => _buildAgentes(),
           _FaseJuego.simulando => _buildSimulando(),
           _FaseJuego.resultado => _buildResultado(),
         },
@@ -739,9 +989,9 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16.0),
           child: _Encabezado(
-            icono: Icons.local_fire_department,
+            icono: Icons.stadium,
             titulo: 'ARMA TU EQUIPO',
-            subtitulo: 'Toca una casilla, aparecerán 4 jugadores y eliges uno.',
+            subtitulo: 'Simulación real a 13 rondas con eventos en vivo. Toca una casilla y elige un jugador.',
           ),
         ),
         if (_error != null)
@@ -768,10 +1018,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: _BotonPrincipal(
-            texto: equipoCompleto
-                ? 'ASIGNAR AGENTES'
-                : '${_seleccionados.length}/5 jugadores elegidos',
-            onPressed: equipoCompleto ? _irAAsignarAgentes : null,
+            texto: equipoCompleto ? 'JUGAR PARTIDA COMPLETA' : '${_seleccionados.length}/5 jugadores elegidos',
+            onPressed: equipoCompleto ? _jugarPartida : null,
           ),
         ),
       ],
@@ -843,124 +1091,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     );
   }
 
-  Widget _buildAgentes() {
-    final nombreMapa = _mapaActual?['nombre'] ?? '';
-    final todosAsignados = _agentesAsignados.every((a) => a != null);
-    final asignados = _agentesAsignados.where((a) => a != null).length;
-
-    return Column(
-      children: [
-        const SizedBox(height: 10),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: _Encabezado(
-            icono: Icons.map_outlined,
-            titulo: 'MAPA: ${nombreMapa.toUpperCase()}',
-            color: _kDorado,
-            subtitulo: 'Elige un agente por jugador. La ⭐ marca un buen pick para este mapa.',
-          ),
-        ),
-        const SizedBox(height: 14),
-        Expanded(
-          child: Center(
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 12,
-              runSpacing: 16,
-              children: List.generate(5, _buildCasillaAgente),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: _BotonPrincipal(
-            texto: todosAsignados ? 'JUGAR' : 'Agentes asignados: $asignados/5',
-            onPressed: todosAsignados ? _jugarPartida : null,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCasillaAgente(int index) {
-    final carta = _casillas[index]!;
-    final agenteActual = _agentesAsignados[index];
-    final esBuenPick = _esBuenPick(agenteActual);
-
-    return SizedBox(
-      width: 100,
-      child: GestureDetector(
-        onTap: () => _mostrarSelectorAgente(index),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [BoxShadow(color: _kDorado.withOpacity(0.4), blurRadius: 8)],
-              ),
-              child: CartaWidget(jugador: carta, width: 100),
-            ),
-            const SizedBox(height: 6),
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _kFondo,
-                    border: Border.all(
-                      color: agenteActual == null
-                          ? Colors.white24
-                          : (esBuenPick ? _kDorado : _kRojoOscuro),
-                      width: esBuenPick ? 2.5 : 1.5,
-                    ),
-                    boxShadow: esBuenPick
-                        ? [BoxShadow(color: _kDorado.withOpacity(0.5), blurRadius: 6)]
-                        : null,
-                  ),
-                  child: agenteActual == null
-                      ? const Icon(Icons.add, color: Colors.white38, size: 20)
-                      : ClipOval(
-                          child: Image.asset(
-                            _rutaAgente(agenteActual),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => const Icon(
-                              Icons.person,
-                              color: Colors.white38,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                ),
-                if (esBuenPick)
-                  const Positioned(
-                    top: -3,
-                    right: -3,
-                    child: Icon(Icons.star, color: _kDorado, size: 15),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              agenteActual ?? 'Elegir agente',
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: agenteActual == null ? Colors.white54 : Colors.white,
-                fontSize: 10.5,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildPanelQuimica() {
     final rolesPresentes = _seleccionados.map(_rol).toSet();
     final rolesOk = _rolesPrincipales.where(rolesPresentes.contains).length;
@@ -1020,7 +1150,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     );
   }
 
-  /// Los "3 puntitos" de química de una carta: dorado = ganado, vacío = no ganado.
   Widget _puntitosQuimica(int valor) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1044,124 +1173,55 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
   }
 
   Widget _buildSimulando() {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Container(color: _kFondo),
-        if (_mapaActual != null)
-          Positioned.fill(
-            child: Center(
-              child: SizedBox(
-                width: MediaQuery.of(context).size.width * 0.94,
-                child: ShaderMask(
-                  blendMode: BlendMode.dstIn,
-                  shaderCallback: (rect) {
-                    return const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.white,
-                        Colors.white,
-                        Colors.transparent,
-                      ],
-                      stops: [0.0, 0.1, 0.9, 1.0],
-                    ).createShader(rect);
-                  },
-                  child: Image.asset(
-                    _mapaActual!['imagen']!,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-                  ),
+    return Container(
+      color: _kFondo,
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _Tarjeta(
+                borde: _enProrroga ? _kDorado : _kRojoOscuro,
+                child: Column(
+                  children: [
+                    if (_enProrroga)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 6.0),
+                        child: Text('¡PRÓRROGA!',
+                            style: TextStyle(color: _kDorado, fontSize: 12.5, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+                      ),
+                    Text(
+                      '$_rondasJugador — $_rondasIA',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 52,
+                        fontWeight: FontWeight.w900,
+                        shadows: [Shadow(color: Colors.black, blurRadius: 12)],
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _enProrroga
+                          ? 'Se necesita diferencia de 2 rondas para ganar'
+                          : 'Primero en llegar a $_rondasParaGanar rondas gana',
+                      style: const TextStyle(color: Colors.white38, fontSize: 11.5),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _rondaActual == 0 ? 'Preparando la partida...' : 'Ronda $_rondaActual',
+                      style: const TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
+                    _buildIndicadorMomentum(),
+                  ],
                 ),
               ),
-            ),
-          ),
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                _kFondo.withOpacity(0.35),
-                _kFondo.withOpacity(0.55),
-                _kFondo.withOpacity(0.35),
-              ],
-            ),
+              const SizedBox(height: 18),
+              _buildTimeline(),
+            ],
           ),
         ),
-        Positioned.fill(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _Tarjeta(
-                    borde: _kRojoOscuro,
-                    child: Column(
-                      children: [
-                        if (_mapaActual != null)
-                          Text(
-                            _mapaActual!['nombre']!.toUpperCase(),
-                            style: const TextStyle(color: Colors.white38, fontSize: 11.5, letterSpacing: 1.5),
-                          ),
-                        const SizedBox(height: 10),
-                        Text(
-                          '$_rondasJugador — $_rondasIA',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 52,
-                            fontWeight: FontWeight.w900,
-                            shadows: [Shadow(color: Colors.black, blurRadius: 12)],
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Gana quien llegue primero a $_rondasParaGanar rondas',
-                          style: const TextStyle(color: Colors.white38, fontSize: 11.5),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          _rondaActual == 0 ? 'Preparando la partida...' : 'Ronda $_rondaActual',
-                          style: const TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w600),
-                        ),
-                        if (_bonoSinergia > 0)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
-                            child: Text(
-                              '🎯 Sinergia de agentes: +$_bonoSinergia',
-                              style: const TextStyle(color: _kDorado, fontSize: 12, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        _buildIndicadorMomentum(),
-                        const SizedBox(height: 14),
-                        Wrap(
-                          alignment: WrapAlignment.center,
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: List.generate(_historialRondas.length + (_resolviendoRonda ? 1 : 0), (i) {
-                            Color color = Colors.white38;
-                            IconData icono = Icons.hourglass_bottom;
-                            if (i < _historialRondas.length) {
-                              final gane = _historialRondas[i];
-                              color = gane ? _kDorado : _kRojo;
-                              icono = gane ? Icons.check_circle : Icons.cancel;
-                            }
-                            return Icon(icono, color: color, size: 20);
-                          }),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  _buildTimeline(),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -1177,7 +1237,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     if (rachaRival >= 3) {
       return const Padding(
         padding: EdgeInsets.only(top: 6.0),
-        child: Text('La IA está en racha, -1 a tu equipo', style: TextStyle(color: _kRojo, fontSize: 12, fontWeight: FontWeight.bold)),
+        child: Text('El rival está en racha, -1 a tu equipo', style: TextStyle(color: _kRojo, fontSize: 12, fontWeight: FontWeight.bold)),
       );
     }
     return const SizedBox.shrink();
@@ -1209,7 +1269,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      constraints: const BoxConstraints(maxHeight: 260),
+      constraints: const BoxConstraints(maxHeight: 300),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.35),
         borderRadius: BorderRadius.circular(16),
@@ -1221,8 +1281,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
         children: [
           if (rondaEnVivo != null) ...[
             _buildEntradaEnVivo(rondaEnVivo),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
               child: Divider(height: 1, color: Colors.white12),
             ),
           ],
@@ -1305,6 +1365,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
   Widget _buildEntradaResuelta(Map<String, dynamic> evento) {
     final gano = evento['gano'] as bool;
     final ronda = evento['ronda'] as int;
+    final enProrroga = evento['prorroga'] == true;
     final lineas = (evento['lineas'] as List).cast<String>();
     final color = gano ? _kDorado : _kRojo;
 
@@ -1316,7 +1377,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
             Icon(gano ? Icons.check_circle : Icons.cancel, color: color, size: 14),
             const SizedBox(width: 6),
             Text(
-              'RONDA $ronda · ${gano ? 'GANADA' : 'PERDIDA'}',
+              'RONDA $ronda${enProrroga ? ' (PRÓRROGA)' : ''} · ${gano ? 'GANADA' : 'PERDIDA'}',
               style: TextStyle(
                 color: color,
                 fontSize: 11,
@@ -1361,14 +1422,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                   'Marcador final: $_rondasJugador - $_rondasIA',
                   style: const TextStyle(color: _kTextoSuave, fontSize: 14.5),
                 ),
-                if (_bonoSinergia > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4.0),
-                    child: Text(
-                      'Ventaja táctica por sinergia: +$_bonoSinergia',
-                      style: const TextStyle(color: _kDorado, fontSize: 11.5, fontWeight: FontWeight.bold),
-                    ),
-                  ),
                 const SizedBox(height: 18),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1463,7 +1516,7 @@ class _SelectorCartasSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.local_fire_department, color: _kRojo, size: 28),
+          const Icon(Icons.stadium, color: _kRojo, size: 28),
           const SizedBox(height: 6),
           const Text(
             'ELIGE TU JUGADOR',

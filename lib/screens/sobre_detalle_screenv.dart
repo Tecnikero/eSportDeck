@@ -2,8 +2,10 @@ import 'dart:math';
 import 'dart:ui';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/carta_widget.dart';
+import '../providers/perfil_provider.dart';
 
 enum _EfectoRareza { ninguno, plata, violeta, dorado }
 
@@ -72,10 +74,29 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   bool _comprado = false;
   bool _abriendo = false;
   bool _mostrarAmbas = false;
+  bool _aperturaMasiva = false;
   String? _error;
   List<Map<String, dynamic>> _cartasReveladas = [];
 
   ui.Image? _logoImagenCruda;
+
+  // ---------- SISTEMA DE PITY (protección contra mala suerte) ----------
+  // Tras abrir este número de sobres sin obtener la rareza indicada, el
+  // próximo sobre garantiza esa rareza. Es la mecánica clave para que
+  // el jugador nunca sienta que "nunca le toca nada bueno".
+  static const int _pityDoradoMax = 30;
+  static const int _pityVioletaMax = 8;
+
+  int _pityDorado = 0;
+  int _pityVioleta = 0;
+
+  String get _sobreId => '${widget.sobre['id'] ?? widget.sobre['nombre']}';
+
+  void _cargarPity() {
+    final perfil = context.read<PerfilProvider>();
+    _pityDorado = perfil.obtenerPity(_sobreId, 'dorado');
+    _pityVioleta = perfil.obtenerPity(_sobreId, 'violeta');
+  }
 
   @override
   void initState() {
@@ -135,6 +156,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     ]).animate(CurvedAnimation(parent: _rasgado, curve: const Interval(0.4, 1.0)));
 
     _cargarImagenLogo();
+    _cargarPity();
   }
 
   @override
@@ -155,8 +177,17 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     return aimB.compareTo(aimA);
   }
 
-  Map<String, dynamic> _elegirCartaPonderada(List<Map<String, dynamic>> pool) {
-    final tramosRestantes = List<Map<String, dynamic>>.from(_tramos);
+  Map<String, dynamic> _elegirCartaPonderada(
+    List<Map<String, dynamic>> pool, {
+    Set<_EfectoRareza>? tramosPermitidos,
+  }) {
+    var tramosRestantes = List<Map<String, dynamic>>.from(_tramos);
+
+    if (tramosPermitidos != null) {
+      final filtrados =
+          tramosRestantes.where((t) => tramosPermitidos.contains(t['efecto'])).toList();
+      if (filtrados.isNotEmpty) tramosRestantes = filtrados;
+    }
 
     while (tramosRestantes.isNotEmpty) {
       final pesoTotal = tramosRestantes.fold<int>(0, (s, t) => s + (t['peso'] as int));
@@ -183,6 +214,65 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       tramosRestantes.remove(tramoElegido);
     }
     return pool[_random.nextInt(pool.length)];
+  }
+
+  /// Actualiza los contadores de pity según lo obtenido en esta apertura y,
+  /// si se alcanzó el tope sin la rareza correspondiente, reemplaza la última
+  /// carta revelada por una garantizada de esa rareza.
+  void _aplicarPity(List<Map<String, dynamic>> elegidas, List<Map<String, dynamic>> poolRestante) {
+    final huboDorado = elegidas.any((j) => _efectoDeCarta(j) == _EfectoRareza.dorado);
+    final huboVioletaOMejor = elegidas.any((j) {
+      final e = _efectoDeCarta(j);
+      return e == _EfectoRareza.violeta || e == _EfectoRareza.dorado;
+    });
+
+    _pityDorado = huboDorado ? 0 : _pityDorado + elegidas.length;
+    _pityVioleta = huboVioletaOMejor ? 0 : _pityVioleta + elegidas.length;
+
+    if (_pityDorado >= _pityDoradoMax && !huboDorado && poolRestante.isNotEmpty) {
+      elegidas[elegidas.length - 1] = _elegirCartaPonderada(
+        poolRestante,
+        tramosPermitidos: {_EfectoRareza.dorado},
+      );
+      _pityDorado = 0;
+      _pityVioleta = 0;
+    } else if (_pityVioleta >= _pityVioletaMax && !huboVioletaOMejor && poolRestante.isNotEmpty) {
+      elegidas[elegidas.length - 1] = _elegirCartaPonderada(
+        poolRestante,
+        tramosPermitidos: {_EfectoRareza.violeta},
+      );
+      _pityVioleta = 0;
+    }
+  }
+
+  bool get _sobreGarantizado => widget.sobre['garantia'] == true;
+  static const Set<_EfectoRareza> _tramosGarantia = {_EfectoRareza.violeta, _EfectoRareza.dorado};
+
+  /// Dibuja las cartas de UN sobre (respetando su cantidad de cartas) y,
+  /// si el sobre tiene 'garantia': true, se asegura de que al menos una
+  /// carta sea Épica o superior antes de devolver el resultado.
+  List<Map<String, dynamic>> _abrirUnaCopia(List<Map<String, dynamic>> poolCompleto, int cantidadCartas) {
+    var poolDisponible = List<Map<String, dynamic>>.from(poolCompleto);
+    final cartas = <Map<String, dynamic>>[];
+
+    for (var i = 0; i < cantidadCartas; i++) {
+      if (poolDisponible.isEmpty) break;
+      final carta = _elegirCartaPonderada(poolDisponible);
+      cartas.add(carta);
+      poolDisponible = poolDisponible.where((j) => j['id'] != carta['id']).toList();
+    }
+
+    if (_sobreGarantizado && cartas.isNotEmpty) {
+      final yaCumpleGarantia = cartas.any((c) => _tramosGarantia.contains(_efectoDeCarta(c)));
+      if (!yaCumpleGarantia) {
+        cartas[cartas.length - 1] = _elegirCartaPonderada(
+          poolDisponible.isNotEmpty ? poolDisponible : poolCompleto,
+          tramosPermitidos: _tramosGarantia,
+        );
+      }
+    }
+
+    return cartas;
   }
 
   _EfectoRareza _efectoDeCarta(Map<String, dynamic> jugador) {
@@ -252,20 +342,17 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       if (pool.isEmpty) throw Exception('No hay jugadores cargados en el catálogo.');
 
       final cantidadCartas = (widget.sobre['cantidad_cartas'] as int?) ?? 2;
+      final elegidas = _abrirUnaCopia(pool, cantidadCartas);
 
-      final elegidas = <Map<String, dynamic>>[];
-      var poolDisponible = List<Map<String, dynamic>>.from(pool);
-
-      for (var i = 0; i < cantidadCartas; i++) {
-        if (poolDisponible.isEmpty) {
-          break;
-        }
-        final carta = _elegirCartaPonderada(poolDisponible);
-        elegidas.add(carta);
-        final idElegido = carta['id'];
-        poolDisponible = poolDisponible.where((j) => j['id'] != idElegido).toList();
-      }
+      _aplicarPity(elegidas, pool);
       elegidas.sort(_compararJugadores);
+
+      if (mounted) {
+        await context.read<PerfilProvider>().actualizarPity(
+          _sobreId,
+          {'dorado': _pityDorado, 'violeta': _pityVioleta},
+        );
+      }
 
       for (var jugador in elegidas) {
         final jugadorId = jugador['id'];
@@ -327,13 +414,116 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     }
   }
 
+  static const int _copiasBulk = 5;
+  static const double _descuentoBulk = 0.9; // 10% de descuento por comprar x5
+
+  int get precioBulk => ((widget.sobre['precio'] as int) * _copiasBulk * _descuentoBulk).round();
+
+  Future<void> _comprarYAbrirBulk() async {
+    if (_abriendo || _comprando) return;
+    setState(() {
+      _comprando = true;
+      _abriendo = true;
+      _error = null;
+    });
+
+    try {
+      final userId = supabase.auth.currentUser?.id;
+      if (userId == null) throw Exception('No hay sesión activa.');
+
+      final perfil = await supabase.from('profiles').select('dinero').eq('id', userId).single();
+      final dineroActual = (perfil['dinero'] ?? 0) as int;
+
+      if (dineroActual < precioBulk) {
+        setState(() {
+          _error = 'No tienes suficiente dinero para abrir $_copiasBulk sobres.';
+          _comprando = false;
+          _abriendo = false;
+        });
+        return;
+      }
+
+      final catalogo = await supabase.from('jugadores').select();
+      final todosCompletos = List<Map<String, dynamic>>.from(catalogo as List);
+      final rarezas = List<String>.from(widget.sobre['rarezas'] as List);
+
+      var pool = todosCompletos.where((j) => rarezas.contains(j['rareza'])).toList();
+      if (pool.isEmpty) pool = todosCompletos;
+      if (pool.isEmpty) throw Exception('No hay jugadores cargados en el catálogo.');
+
+      final cantidadCartas = (widget.sobre['cantidad_cartas'] as int?) ?? 2;
+      final elegidas = <Map<String, dynamic>>[];
+
+      for (var copia = 0; copia < _copiasBulk; copia++) {
+        elegidas.addAll(_abrirUnaCopia(pool, cantidadCartas));
+      }
+
+      _aplicarPity(elegidas, pool);
+      elegidas.sort(_compararJugadores);
+
+      await supabase.from('profiles').update({'dinero': dineroActual - precioBulk}).eq('id', userId);
+
+      if (mounted) {
+        await context.read<PerfilProvider>().actualizarPity(
+          _sobreId,
+          {'dorado': _pityDorado, 'violeta': _pityVioleta},
+        );
+        context.read<PerfilProvider>().actualizarDinero(dineroActual - precioBulk);
+      }
+
+      for (var jugador in elegidas) {
+        final jugadorId = jugador['id'];
+        final respuesta = await supabase
+            .from('inventario')
+            .select('id, cantidad')
+            .eq('user_id', userId)
+            .eq('jugador_id', jugadorId);
+
+        final List filas = (respuesta as List);
+        if (filas.isNotEmpty) {
+          final registro = filas.first;
+          final int inventarioId = registro['id'];
+          final int cantidadActual = (registro['cantidad'] ?? 1) as int;
+          await supabase.from('inventario').update({'cantidad': cantidadActual + 1}).eq('id', inventarioId);
+        } else {
+          await supabase.from('inventario').insert({
+            'user_id': userId,
+            'jugador_id': jugadorId,
+            'cantidad': 1,
+          });
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _comprado = true;
+        _comprando = false;
+        _abriendo = false;
+        _aperturaMasiva = true;
+        _cartasReveladas = elegidas;
+        _mostrarAmbas = true;
+      });
+    } catch (e) {
+      debugPrint('ERROR AL ABRIR EN LOTE: $e');
+      if (!mounted) return;
+      setState(() {
+        _error = 'No se pudo completar la apertura múltiple.';
+        _comprando = false;
+        _abriendo = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final sobre = widget.sobre;
     final color = sobre['color'] as Color;
+    final mostrandoSobreParaAbrir =
+        _cartasReveladas.isEmpty && _comprado;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF050914),
+      backgroundColor: const Color(0xFF000000),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -343,16 +533,23 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
           onPressed: () => Navigator.pop(context, _cartasReveladas.isNotEmpty),
         ),
       ),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(child: _buildFondoLogoVCT()),
-
-            _cartasReveladas.isNotEmpty
+      // Todas las capas de fondo cubren la pantalla COMPLETA (incluida el
+      // área bajo el status bar y sobre la barra de gestos), así no queda
+      // ninguna costura de color arriba/abajo mientras corre la animación.
+      body: Stack(
+        children: [
+          Positioned.fill(child: _buildFondoLogoVCT()),
+          if (mostrandoSobreParaAbrir) ...[
+            Positioned.fill(child: _buildCapaFondoSolido(color)),
+            Positioned.fill(child: _buildCapaBrillo(color)),
+            Positioned.fill(child: _buildCapaFoto()),
+          ],
+          SafeArea(
+            child: _cartasReveladas.isNotEmpty
                 ? (_mostrarAmbas ? _buildCartasReveladas() : _buildRevelacionInicial())
                 : (_comprado ? _buildSobreParaAbrir(sobre, color) : _buildVistaCompra(sobre, color)),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -426,9 +623,20 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
           Positioned.fill(
             child: Opacity(
               opacity: 0.15,
-              child: ColorFiltered(
-                colorFilter: const ColorFilter.matrix(_matrizGris),
-                child: _logoRotadoCover(),
+              child: ShaderMask(
+                blendMode: BlendMode.dstIn,
+                shaderCallback: (rect) {
+                  return const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.white, Colors.white, Colors.transparent],
+                    stops: [0.0, 0.18, 0.82, 1.0],
+                  ).createShader(rect);
+                },
+                child: ColorFiltered(
+                  colorFilter: const ColorFilter.matrix(_matrizGris),
+                  child: _logoRotadoCover(),
+                ),
               ),
             ),
           ),
@@ -557,7 +765,61 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   }
 
   Widget _buildEfectoPrevio() {
-    return const SizedBox.shrink();
+    if (_abriendo) return const SizedBox.shrink();
+    return AnimatedBuilder(
+      animation: Listenable.merge([_pulso, _fondoController]),
+      builder: (context, child) {
+        final colorSobre = widget.sobre['color'] as Color;
+        final respiracion = _escalaPulso.value; // 1.0 -> 1.05
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            // Glow ambiental que "respira" al mismo ritmo que el sobre.
+            Transform.scale(
+              scale: respiracion,
+              child: Container(
+                width: 260,
+                height: 260,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: colorSobre.withOpacity(0.35),
+                      blurRadius: 90,
+                      spreadRadius: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Partículas orbitando suavemente alrededor del sobre.
+            ...List.generate(6, (i) {
+              final anguloBase = (i / 6) * 2 * pi;
+              final angulo = anguloBase + _fondoController.value * 2 * pi;
+              final radio = 150.0 + (sin(_fondoController.value * 2 * pi + i) * 12);
+              final destello = (0.5 + 0.5 * sin(_fondoController.value * 2 * pi * 2 + i)).clamp(0.0, 1.0);
+              return Transform.translate(
+                offset: Offset(cos(angulo) * radio, sin(angulo) * radio * 0.6),
+                child: Opacity(
+                  opacity: 0.25 + destello * 0.55,
+                  child: Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: i.isEven ? colorSobre : Colors.white,
+                      boxShadow: [
+                        BoxShadow(color: (i.isEven ? colorSobre : Colors.white).withOpacity(0.8), blurRadius: 6),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        );
+      },
+    );
   }
 
   Widget _efectoPlata() {
@@ -727,13 +989,13 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   }
 
   Widget _buildVistaCompra(Map<String, dynamic> sobre, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28.0),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _imagenSobre(sobre, color, 200),
-          const SizedBox(height: 28),
+          _imagenSobre(sobre, color, 180),
+          const SizedBox(height: 20),
           Text(
             sobre['nombre'],
             style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
@@ -744,14 +1006,20 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white54, fontSize: 14),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 20),
+
+          _buildPanelPity(color),
+          const SizedBox(height: 12),
+          _buildPanelProbabilidades(color),
+
+          const SizedBox(height: 24),
           if (_error != null) ...[
             Text(_error!, style: const TextStyle(color: Colors.redAccent), textAlign: TextAlign.center),
             const SizedBox(height: 16),
           ],
           if (_comprando)
             const CircularProgressIndicator(color: Color(0xFFFFD700))
-          else
+          else ...[
             SizedBox(
               width: double.infinity,
               height: 54,
@@ -767,11 +1035,163 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                     const Icon(Icons.monetization_on, color: Colors.black),
                     const SizedBox(width: 8),
                     Text(
-                      'COMPRAR (${sobre['precio']})',
+                      'ABRIR 1 (${sobre['precio']})',
                       style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: const Color(0xFFFFD700), width: 2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                ),
+                onPressed: _comprarYAbrirBulk,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.bolt, color: Color(0xFFFFD700)),
+                    const SizedBox(width: 8),
+                    Text(
+                      'ABRIR x5 ($precioBulk) · -10%',
+                      style: const TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Muestra cuánto le falta al jugador para que el sistema le garantice
+  /// una carta épica o legendaria. Ver el progreso es lo que mantiene a
+  /// alguien abriendo "uno más" incluso tras una mala racha.
+  Widget _buildPanelPity(Color color) {
+    final faltanViolestas = (_pityVioletaMax - _pityVioleta).clamp(0, _pityVioletaMax);
+    final faltanDorados = (_pityDoradoMax - _pityDorado).clamp(0, _pityDoradoMax);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        children: [
+          _filaPity(
+            'Épica garantizada en',
+            faltanViolestas,
+            _pityVioleta / _pityVioletaMax,
+            const Color(0xFF9B59B6),
+          ),
+          const SizedBox(height: 10),
+          _filaPity(
+            'Legendaria garantizada en',
+            faltanDorados,
+            _pityDorado / _pityDoradoMax,
+            const Color(0xFFFFD700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _filaPity(String etiqueta, int faltan, double progreso, Color color) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: Text(
+            faltan == 0 ? '¡Garantizada en este sobre!' : '$etiqueta $faltan sobre${faltan == 1 ? '' : 's'}',
+            style: TextStyle(
+              color: faltan == 0 ? color : Colors.white70,
+              fontSize: 12,
+              fontWeight: faltan == 0 ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 2,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: progreso.clamp(0.0, 1.0),
+              minHeight: 7,
+              backgroundColor: Colors.white10,
+              valueColor: AlwaysStoppedAnimation(color),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Panel colapsable con las probabilidades reales de cada rareza,
+  /// para dar transparencia (y generar expectativa) antes de abrir.
+  Widget _buildPanelProbabilidades(Color color) {
+    final pesoTotal = _tramos.fold<int>(0, (s, t) => s + (t['peso'] as int));
+
+    String etiquetaTramo(_EfectoRareza efecto) => switch (efecto) {
+          _EfectoRareza.dorado => 'Legendaria',
+          _EfectoRareza.violeta => 'Épica',
+          _EfectoRareza.plata => 'Rara',
+          _EfectoRareza.ninguno => 'Común',
+        };
+
+    Color colorTramo(_EfectoRareza efecto) => switch (efecto) {
+          _EfectoRareza.dorado => const Color(0xFFFFD700),
+          _EfectoRareza.violeta => const Color(0xFF9B59B6),
+          _EfectoRareza.plata => Colors.white70,
+          _EfectoRareza.ninguno => Colors.white38,
+        };
+
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        collapsedIconColor: Colors.white54,
+        iconColor: color,
+        title: const Text(
+          'Ver probabilidades',
+          style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+        children: [
+          for (final tramo in _tramos)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colorTramo(tramo['efecto'] as _EfectoRareza),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      etiquetaTramo(tramo['efecto'] as _EfectoRareza),
+                      style: const TextStyle(color: Colors.white70, fontSize: 12.5),
+                    ),
+                  ),
+                  Text(
+                    '${(((tramo['peso'] as int) / pesoTotal) * 100).toStringAsFixed(1)}%',
+                    style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
             ),
         ],
@@ -785,12 +1205,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       behavior: HitTestBehavior.opaque,
       child: Stack(
         children: [
-          Positioned.fill(child: _buildCapaFondoSolido(color)),
-
-          Positioned.fill(child: _buildCapaBrillo(color)),
-
-          Positioned.fill(child: _buildCapaFoto()),
-
           Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -956,13 +1370,41 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   }
 
   Widget _buildCartasReveladas() {
+    Map<String, dynamic>? mejor;
+    for (final carta in _cartasReveladas) {
+      if (mejor == null || ((carta['ovr'] ?? 0) as num) > ((mejor['ovr'] ?? 0) as num)) {
+        mejor = carta;
+      }
+    }
+    final efectoMejor = mejor != null ? _efectoDeCarta(mejor) : _EfectoRareza.ninguno;
+
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
-          child: Text(
-            '¡Obtuviste ${_cartasReveladas.length} cartas!',
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          child: Column(
+            children: [
+              Text(
+                '¡Obtuviste ${_cartasReveladas.length} cartas!',
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              if (_aperturaMasiva && efectoMejor != _EfectoRareza.ninguno) ...[
+                const SizedBox(height: 6),
+                Text(
+                  efectoMejor == _EfectoRareza.dorado
+                      ? '★ ¡Sacaste una LEGENDARIA! ★'
+                      : (efectoMejor == _EfectoRareza.violeta ? '¡Sacaste una ÉPICA!' : '¡Sacaste una carta RARA!'),
+                  style: TextStyle(
+                    color: efectoMejor == _EfectoRareza.dorado
+                        ? const Color(0xFFFFD700)
+                        : (efectoMejor == _EfectoRareza.violeta ? const Color(0xFF9B59B6) : Colors.white70),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
         Expanded(

@@ -2,38 +2,53 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'sobre_detalle_screenv.dart';
 import '../providers/perfil_provider.dart';
+import '../widgets/racha_dialog.dart';
 
+
+// Las probabilidades (peso) están expresadas directamente como porcentaje
+// (cada lista de tramos suma 100) para que coincidan exactamente con la
+// tabla de drop rates. 'efecto' usa las mismas claves que reconoce
+// SobreDetalleScreen: ninguno=Común, plata=Rara, violeta=Épica, dorado=Legendaria.
+const List<Map<String, dynamic>> _tramosBasico = [
+  {'min': 0, 'max': 80, 'peso': 70, 'efecto': 'ninguno'},
+  {'min': 81, 'max': 88, 'peso': 24, 'efecto': 'plata'},
+  {'min': 89, 'max': 91, 'peso': 5, 'efecto': 'violeta'},
+  {'min': 92, 'max': 99, 'peso': 1, 'efecto': 'dorado'},
+];
+
+const List<Map<String, dynamic>> _tramosPremium = [
+  {'min': 0, 'max': 80, 'peso': 40, 'efecto': 'ninguno'},
+  {'min': 81, 'max': 88, 'peso': 40, 'efecto': 'plata'},
+  {'min': 89, 'max': 91, 'peso': 17, 'efecto': 'violeta'},
+  {'min': 92, 'max': 99, 'peso': 3, 'efecto': 'dorado'},
+];
 
 const List<Map<String, dynamic>> tiposSobre = [
   {
     'id': 'basico',
     'nombre': 'Sobre Básico',
-    'precio': 100,
+    'precio': 1000,
+    'cantidad_cartas': 2,
     'icono': Icons.style_outlined,
     'imagen': 'assets/valorant/sobres/sobres-beta.png',
     'color': Color(0xFF4A90D9),
-    'rarezas': ['Normal'],
-    'descripcion': '2 cartas aleatorias del catálogo.',
+    'rarezas': ['Normal', 'champions', 'finals_champions'],
+    'tramos': _tramosBasico,
+    'garantia': false,
+    'descripcion': '2 cartas aleatorias del catálogo.\nComún 70% · Rara 24% · Épica 5% · Legendaria 1%.',
   },
   {
-    'id': 'champions',
-    'nombre': 'Sobre Champions',
-    'precio': 400,
-    'icono': Icons.auto_awesome,
-    'imagen': 'assets/valorant/sobres/sobres-beta.png',
-    'color': Color(0xFF9B59B6),
-    'rarezas': ['Normal', 'Champions'],
-    'descripcion': 'Mayor probabilidad de cartas edición Champions.',
-  },
-  {
-    'id': 'finals_champions',
-    'nombre': 'Sobre Finals Champions',
-    'precio': 900,
+    'id': 'premium',
+    'nombre': 'Sobre Premium',
+    'precio': 5000,
+    'cantidad_cartas': 2,
     'icono': Icons.workspace_premium,
     'imagen': 'assets/valorant/sobres/sobres-beta.png',
     'color': Color(0xFFFFD700),
-    'rarezas': ['Champions', 'Finals_Champions'],
-    'descripcion': 'Cartas garantizadas de las ediciones más altas.',
+    'rarezas': ['Normal', 'champions', 'finals_champions'],
+    'tramos': _tramosPremium,
+    'garantia': true,
+    'descripcion': 'Garantiza al menos 1 carta Épica o superior.\nComún 40% · Rara 40% · Épica 17% · Legendaria 3%.',
   },
 ];
 
@@ -48,8 +63,10 @@ class _TiendaScreenState extends State<TiendaScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PerfilProvider>().cargar();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await context.read<PerfilProvider>().cargar();
+      if (!mounted) return;
+      await mostrarRachaDiariaSiCorresponde(context);
     });
   }
 
@@ -86,17 +103,65 @@ class _TiendaScreenState extends State<TiendaScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: GridView.builder(
-          itemCount: tiposSobre.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 14,
-            mainAxisSpacing: 14,
-            childAspectRatio: 0.72,
-          ),
-          itemBuilder: (context, index) => _tarjetaSobre(tiposSobre[index]),
+        child: Column(
+          children: [
+            _bannerRacha(),
+            const SizedBox(height: 14),
+            Expanded(
+              child: GridView.builder(
+                itemCount: tiposSobre.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 14,
+                  childAspectRatio: 0.72,
+                ),
+                itemBuilder: (context, index) => _tarjetaSobre(tiposSobre[index]),
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _bannerRacha() {
+    return Consumer<PerfilProvider>(
+      builder: (context, perfil, _) {
+        return GestureDetector(
+          onTap: perfil.recompensaDiariaDisponible
+              ? () => mostrarRachaDiariaSiCorresponde(context)
+              : null,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFD700).withOpacity(0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFFFFD700).withOpacity(perfil.recompensaDiariaDisponible ? 0.7 : 0.25),
+                width: perfil.recompensaDiariaDisponible ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.local_fire_department, color: Color(0xFFFFD700), size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    perfil.recompensaDiariaDisponible
+                        ? '¡Tu recompensa diaria te espera!'
+                        : 'Racha activa: ${perfil.rachaDias} día${perfil.rachaDias == 1 ? '' : 's'}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                if (perfil.recompensaDiariaDisponible)
+                  const Icon(Icons.chevron_right, color: Color(0xFFFFD700)),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -149,9 +214,29 @@ class _TiendaScreenState extends State<TiendaScreen> {
                 Text('${sobre['precio']}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
               ],
             ),
+            const SizedBox(height: 6),
+            _indicadorPity(sobre['id'] as String),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _indicadorPity(String sobreId) {
+    const doradoMax = 30;
+    return Consumer<PerfilProvider>(
+      builder: (context, perfil, _) {
+        final pityDorado = perfil.obtenerPity(sobreId, 'dorado');
+        final faltan = (doradoMax - pityDorado).clamp(0, doradoMax);
+        return Text(
+          faltan <= 3 ? '¡Legendaria a $faltan sobres!' : 'Legendaria en $faltan',
+          style: TextStyle(
+            color: faltan <= 3 ? const Color(0xFFFFD700) : Colors.white38,
+            fontSize: 10.5,
+            fontWeight: faltan <= 3 ? FontWeight.bold : FontWeight.normal,
+          ),
+        );
+      },
     );
   }
 }
