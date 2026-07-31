@@ -87,35 +87,24 @@ class PerfilProvider extends ChangeNotifier {
 
   /// Reclama la recompensa diaria. Devuelve el monto ganado, o null si ya se reclamó hoy.
   Future<int?> reclamarRecompensaDiaria() async {
-    final userId = _supabase.auth.currentUser?.id;
-    if (userId == null || !_recompensaDiariaDisponible) return null;
+  final userId = _supabase.auth.currentUser?.id;
+  if (userId == null || !_recompensaDiariaDisponible) return null;
 
-    final hoy = DateTime.now();
-    final ayer = hoy.subtract(const Duration(days: 1));
-    final esConsecutivo = _ultimaRecompensa != null && _mismoDia(_ultimaRecompensa!, ayer);
+  try {
+    final resultado = await _supabase.rpc('fn_reclamar_recompensa_diaria') as Map<String, dynamic>;
+    final recompensa = (resultado['recompensa'] as num).toInt();
 
-    final nuevaRacha = esConsecutivo ? (_rachaDias % 7) + 1 : 1;
-    final recompensa = _recompensasPorDiaDeRacha[nuevaRacha - 1];
-    final nuevoDinero = (_dinero ?? 0) + recompensa;
-
-    try {
-      await _supabase.from('profiles').update({
-        'dinero': nuevoDinero,
-        'racha_dias': nuevaRacha,
-        'ultima_recompensa': hoy.toIso8601String().substring(0, 10),
-      }).eq('id', userId);
-
-      _dinero = nuevoDinero;
-      _rachaDias = nuevaRacha;
-      _ultimaRecompensa = hoy;
-      _recompensaDiariaDisponible = false;
-      notifyListeners();
-      return recompensa;
-    } catch (e) {
-      debugPrint('Error al reclamar recompensa diaria: $e');
-      return null;
-    }
+    _dinero = (resultado['dinero'] as num).toInt();
+    _rachaDias = (resultado['racha_dias'] as num).toInt();
+    _ultimaRecompensa = DateTime.now();
+    _recompensaDiariaDisponible = false;
+    notifyListeners();
+    return recompensa;
+  } catch (e) {
+    debugPrint('Error al reclamar recompensa diaria: $e');
+    return null;
   }
+}
 
   // ---------- PITY ----------
 

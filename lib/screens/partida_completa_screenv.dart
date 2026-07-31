@@ -552,16 +552,14 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
   }
 
   Future<void> _pagarMonedas(int cantidad) async {
-    final userId = supabase.auth.currentUser?.id;
-    if (userId == null) return;
-    try {
-      final perfil = await supabase.from('profiles').select('dinero').eq('id', userId).single();
-      final actual = (perfil['dinero'] ?? 0) as int;
-      await supabase.from('profiles').update({'dinero': actual + cantidad}).eq('id', userId);
-    } catch (e) {
-      debugPrint('ERROR AL PAGAR MONEDAS DE PARTIDA COMPLETA: $e');
-    }
+  final userId = supabase.auth.currentUser?.id;
+  if (userId == null) return;
+  try {
+    await supabase.rpc('fn_pagar_monedas_partida', params: {'p_cantidad': cantidad});
+  } catch (e) {
+    debugPrint('ERROR AL PAGAR MONEDAS DE PARTIDA: $e');
   }
+}
 
   void _jugarDeNuevo() {
     setState(() {
