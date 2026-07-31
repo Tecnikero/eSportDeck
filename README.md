@@ -33,7 +33,7 @@ No basta con tener cartas de OVR alto. Las partidas se ganan en el **Draft**:
 Actualmente, el motor lógico del juego está diseñado para simular competiciones Hero-Shooter tácticos, pero el ecosistema está construido para expandirse a otras disciplinas.
 
 - [x] **Fase 1:** Sistema Core, UI Base y Motor de Duelos (Enfoque: VALORANT).
-- [ ] **Fase 2:** Integración de Base de Datos, Mercado y Sobres.
+- [X] **Fase 2:** Integración de Base de Datos, Mercado y Sobres.
 - [ ] **Fase 3:** Expansión de motor a economía de CS2 (Counter-Strike 2).
 - [ ] **Fase 4:** Expansión a físicas/mecánicas de Rocket League.
 
