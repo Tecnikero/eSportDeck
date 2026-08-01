@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/carta_widget.dart';
+import '../widgets/sesion_dialog.dart';
+import '../providers/perfil_provider.dart';
 
 // ---------- ORDEN POR OVR ----------
 // Se alterna presionando el circulito "OVR": sin orden -> descendente -> ascendente -> sin orden.
@@ -8,6 +11,7 @@ enum _OrdenOvr { ninguno, descendente, ascendente }
 
 const Color _kFondo = Color(0xFF050914);
 const Color _kDorado = Color(0xFFFFD700);
+const Color _kFondoPanel = Color(0xFF11172A);
 
 class ColeccionScreen extends StatefulWidget {
   const ColeccionScreen({super.key});
@@ -89,13 +93,15 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
 
       final perfil = await supabase.from('profiles').select('dinero').eq('id', userId).single();
       final monedasActuales = (perfil['dinero'] ?? 1000) as int;
+      final nuevoSaldo = monedasActuales + precioVenta;
 
       await supabase
           .from('profiles')
-          .update({'dinero': monedasActuales + precioVenta})
+          .update({'dinero': nuevoSaldo})
           .eq('id', userId);
 
       if (mounted) {
+  context.read<PerfilProvider>().actualizarDinero(nuevoSaldo);
   setState(() {
     _cartaSeleccionada = null;
     _futureJugadores = _cargarJugadores();
@@ -112,6 +118,127 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No se pudo procesar la venta.'), backgroundColor: Colors.red),
       );
+    }
+  }
+
+  // ---------- VENTA MASIVA DE REPETIDAS ----------
+  // "Repetida" = toda copia por encima de la primera de cada carta (siempre
+  // se conserva 1 unidad de cada una). Se vende todo de una sola vez al
+  // precio normal según rareza.
+
+  List<Map<String, dynamic>> _repetidasDe(List<Map<String, dynamic>> jugadores) =>
+      jugadores.where((c) => (c['_cantidad'] as int? ?? 1) > 1).toList();
+
+  int _totalCopiasRepetidas(List<Map<String, dynamic>> repetidas) =>
+      repetidas.fold<int>(0, (suma, c) => suma + ((c['_cantidad'] as int) - 1));
+
+  int _totalGananciaRepetidas(List<Map<String, dynamic>> repetidas) => repetidas.fold<int>(
+      0, (suma, c) => suma + (_precioVenta(c) * ((c['_cantidad'] as int) - 1)));
+
+  Future<void> _confirmarVenderTodasLasRepetidas(List<Map<String, dynamic>> repetidas) async {
+    final totalCopias = _totalCopiasRepetidas(repetidas);
+    final totalGanado = _totalGananciaRepetidas(repetidas);
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: _kFondoPanel,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.sell, color: _kDorado, size: 36),
+              const SizedBox(height: 10),
+              const Text(
+                '¿Vender todas las repetidas?',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Se conserva 1 copia de cada carta y se venden las otras $totalCopias por un total de \$$totalGanado.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white54, fontSize: 12.5),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white24),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kDorado,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Vender', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmar != true) return;
+    await _venderTodasLasRepetidas(repetidas, totalCopias, totalGanado);
+  }
+
+  Future<void> _venderTodasLasRepetidas(
+      List<Map<String, dynamic>> repetidas, int totalCopias, int totalGanado) async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      // Deja 1 unidad de cada carta repetida (nunca elimina la fila).
+      for (final carta in repetidas) {
+        await supabase
+            .from('inventario')
+            .update({'cantidad': 1})
+            .eq('id', carta['_inventario_id']);
+      }
+
+      final perfil = await supabase.from('profiles').select('dinero').eq('id', userId).single();
+      final monedasActuales = (perfil['dinero'] ?? 1000) as int;
+      final nuevoSaldo = monedasActuales + totalGanado;
+
+      await supabase.from('profiles').update({'dinero': nuevoSaldo}).eq('id', userId);
+
+      if (!mounted) return;
+      context.read<PerfilProvider>().actualizarDinero(nuevoSaldo);
+      setState(() {
+        _cartaSeleccionada = null;
+        _futureJugadores = _cargarJugadores();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('¡Vendiste $totalCopias cartas repetidas por $totalGanado monedas!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error al vender repetidas: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo procesar la venta masiva.'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -235,6 +362,7 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         automaticallyImplyLeading: false,
+        actions: const [BotonCerrarSesion()],
       ),
       body: Stack(
         children: [
@@ -350,6 +478,7 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                           ? _buildPanelEquipos(equiposDisponibles)
                           : const SizedBox(width: double.infinity, height: 0),
                     ),
+                    _buildBannerVenderRepetidas(jugadores),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 8.0),
                       child: Row(
@@ -671,6 +800,47 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ---------- UI: BANNER "VENDER REPETIDAS" ----------
+  // Solo aparece si hay al menos una carta con más de 1 copia. Usa la
+  // colección completa (sin filtros) para que el banner y el total
+  // vendido sean consistentes sin importar qué filtro esté activo.
+  Widget _buildBannerVenderRepetidas(List<Map<String, dynamic>> jugadores) {
+    final repetidas = _repetidasDe(jugadores);
+    if (repetidas.isEmpty) return const SizedBox.shrink();
+
+    final totalCopias = _totalCopiasRepetidas(repetidas);
+    final totalGanado = _totalGananciaRepetidas(repetidas);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+      child: GestureDetector(
+        onTap: () => _confirmarVenderTodasLasRepetidas(repetidas),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+            color: _kDorado.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _kDorado.withOpacity(0.55), width: 1.2),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.sell, color: _kDorado, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Tienes $totalCopias cartas repetidas · véndelas todas por \$$totalGanado',
+                  style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: _kDorado),
+            ],
+          ),
         ),
       ),
     );

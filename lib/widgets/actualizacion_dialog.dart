@@ -123,8 +123,6 @@ class _ActualizacionDialogState extends State<_ActualizacionDialog> {
   }
 }
 
-/// Ícono de flecha para el AppBar: solo aparece si el usuario pospuso una
-/// actualización disponible. Al tocarlo, reintenta la descarga/instalación.
 class BotonActualizacionPendiente extends StatelessWidget {
   const BotonActualizacionPendiente({super.key});
 

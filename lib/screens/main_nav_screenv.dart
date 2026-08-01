@@ -5,6 +5,7 @@ import 'tienda_screenv.dart';
 import 'modo_juego_screenv.dart';
 import '../providers/perfil_provider.dart';
 import '../widgets/racha_dialog.dart';
+import '../widgets/actualizacion_dialog.dart';
 
 class MainNavScreen extends StatefulWidget {
   const MainNavScreen({super.key});
@@ -20,6 +21,11 @@ class _MainNavScreenState extends State<MainNavScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Primero se revisa la actualización: si es obligatoria, el diálogo
+      // bloquea la pantalla y no se sigue con el resto del flujo.
+      await mostrarActualizacionSiCorresponde(context);
+      if (!mounted) return;
+
       await context.read<PerfilProvider>().cargar();
       if (!mounted) return;
       await mostrarRachaDiariaSiCorresponde(context);
@@ -45,7 +51,8 @@ class _MainNavScreenState extends State<MainNavScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF050914),
       body: _pantallas[_selectedIndex],
-      
+      floatingActionButton: const BotonActualizacionPendiente(),
+
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color(0xFF1B222E),
         selectedItemColor: const Color.fromARGB(255, 255, 70, 85),

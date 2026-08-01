@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'main_nav_screenv.dart';
+import 'menu_principal_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainNavScreen()),
+          MaterialPageRoute(builder: (context) => const MenuPrincipalScreen()),
         );
       });
     }
@@ -45,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const MainNavScreen()),
+        MaterialPageRoute(builder: (context) => const MenuPrincipalScreen()),
       );
       return;
     } catch (e) {

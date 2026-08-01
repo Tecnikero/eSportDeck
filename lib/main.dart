@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'screens/menu_principal_screen.dart'; 
+import 'screens/login_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'providers/perfil_provider.dart';
+import 'providers/actualizacion_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,8 +21,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => PerfilProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => PerfilProvider()),
+        ChangeNotifierProvider(create: (_) => ActualizacionProvider()),
+      ],
       child: MaterialApp(
         title: 'eSports Deck',
         debugShowCheckedModeBanner: false,
@@ -30,7 +34,7 @@ class MyApp extends StatelessWidget {
           useMaterial3: true,
         ),
 
-        home: const MenuPrincipalScreen(), 
+        home: const LoginScreen(),
       ),
     );
   }

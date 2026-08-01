@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'main_nav_screenv.dart';
+import '../widgets/sesion_dialog.dart';
 
 class MenuPrincipalScreen extends StatelessWidget {
   const MenuPrincipalScreen({super.key});
+
+  String get _nombreUsuario {
+    final email = Supabase.instance.client.auth.currentUser?.email ?? '';
+    return email.split('@').first;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,12 +25,17 @@ class MenuPrincipalScreen extends StatelessWidget {
         title: const Text('eSports Deck', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color.fromARGB(255, 0, 0, 0),
         elevation: 0,
+        automaticallyImplyLeading: false,
+        actions: const [BotonCerrarSesion()],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text('Hola, $_nombreUsuario',
+                style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
             const Text("Selecciona tu especialidad:", style: TextStyle(color: Colors.white70, fontSize: 18)),
             const SizedBox(height: 20),
             Expanded(
@@ -54,17 +66,17 @@ class MenuPrincipalScreen extends StatelessWidget {
         color: const Color.fromARGB(255, 57, 60, 63),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: InkWell(
-          onTap: juego['activo'] 
+          onTap: juego['activo']
               ? () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    MaterialPageRoute(builder: (context) => const MainNavScreen()),
                   )
               : null,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Image.asset(
-                juego['logoPath'], 
+                juego['logoPath'],
                 width: 60,
                 height: 60,
                 fit: BoxFit.contain,
@@ -74,7 +86,7 @@ class MenuPrincipalScreen extends StatelessWidget {
               ),
               const SizedBox(height: 15),
               Text(juego['nombre'], style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-              if (!juego['activo']) 
+              if (!juego['activo'])
                 const Padding(
                   padding: EdgeInsets.only(top: 8.0),
                   child: Text("Próximamente", style: TextStyle(color: Color.fromARGB(255, 105, 105, 105), fontSize: 12)),

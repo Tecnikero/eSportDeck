@@ -6,7 +6,6 @@ import '../widgets/carta_widget.dart';
 
 const List<String> _rolesPrincipales = ['DUE', 'INI', 'CON', 'CEN'];
 
-// ---------- TEMA ARENA (mismo look que Partida Rápida) ----------
 const Color _kFondo = Color(0xFF0A0A0A);
 const Color _kFondoPanel = Color(0xFF1A0E0E);
 const Color _kRojo = Color(0xFFE30425);
@@ -160,7 +159,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
   _FaseJuego _fase = _FaseJuego.draft;
   String? _error;
 
-  // ---------- DRAFT ----------
   final List<Map<String, dynamic>?> _casillas = List<Map<String, dynamic>?>.filled(5, null);
   bool _revelando = false;
   int? _casillaEnRevelacion;
@@ -171,7 +169,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
 
   List<Map<String, dynamic>> _rosterRival = [];
 
-  // ---------- PARTIDA ----------
   static const int _rondasParaGanar = 13;
   int _rondasJugador = 0;
   int _rondasIA = 0;
@@ -189,8 +186,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
   bool _victoria = false;
   int _monedasGanadas = 0;
   Map<String, dynamic>? _mvp;
-
-  // ================= DRAFT (idéntico en espíritu a Partida Rápida) =================
 
   Future<void> _abrirCasilla(int index) async {
     if (_casillas[index] != null || _revelando) return;
@@ -260,8 +255,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     Navigator.of(context).pop();
   }
 
-  // ---------- QUÍMICA ----------
-
   String _rol(Map<String, dynamic> j) => '${j['posicion'] ?? ''}'.trim().toUpperCase();
   String _region(Map<String, dynamic> j) => '${j['region'] ?? ''}'.trim().toLowerCase();
   String _equipo(Map<String, dynamic> j) => '${j['equipo'] ?? ''}'.trim().toLowerCase();
@@ -330,8 +323,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     return pool.take(5).toList();
   }
 
-  // ================= LÓGICA DE LA PARTIDA (13 rondas + prórroga) =================
-
   bool _partidaTerminada() {
     if (_rondasJugador >= 12 && _rondasIA >= 12) {
       return (_rondasJugador - _rondasIA).abs() >= 2;
@@ -380,7 +371,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
         String? lineaEvento;
         bool? resultadoForzadoManual;
 
-        // ---------- Decisión Económica: ronda 2 tras ganar la pistola ----------
         if (numeroRonda == 2 && _historialRondas.isNotEmpty && _historialRondas[0] == true) {
           final decision = await _mostrarDecisionEconomica();
           if (decision == 'forzar') {
@@ -396,7 +386,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
             lineaEvento = 'Eco: se sacrificó la ronda para asegurar la número 3 con full-buy.';
           }
         }
-        // ---------- Consecuencias pendientes sobre la ronda 3 ----------
         else if (numeroRonda == 3 && _resultadoForzado.containsKey(3)) {
           resultadoForzadoManual = _resultadoForzado[3];
           lineaEvento = 'El full-buy del eco se sintió: equipo completo y confiado.';
@@ -408,7 +397,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
               ? 'El golpe económico del force pasó la cuenta: ronda perdida con poco armamento.'
               : 'Contra todo pronóstico, el equipo remontó con lo justo.';
         }
-        // ---------- Duelo 1v1: adivinar el AIM oculto ----------
         else if (numeroRonda != 1 && numeroRonda != 13 && _random.nextDouble() < 0.30) {
           final resultado = await _mostrarDueloAim();
           if (resultado != null) {
@@ -420,7 +408,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                     : 'La apuesta del duelo 1v1 no se cumplió.');
           }
         }
-        // ---------- Clutch 1vX: la estadística CLU queda oculta ----------
         else if (_rachaActual(false) >= 2 && _random.nextDouble() < 0.45) {
           final resultado = await _mostrarClutch();
           if (resultado != null) {
@@ -430,7 +417,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                 : 'La lectura del clutch falló: se enfrentó primero al rival equivocado.';
           }
         }
-        // ---------- Anti-Eco: el rival viene de una mala racha económica ----------
         else if (_rachaActual(true) >= 2 && _random.nextDouble() < 0.35) {
           final resultado = await _mostrarAntiEco();
           if (resultado != null) {
@@ -442,7 +428,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                     : 'El rush salió mal: el rival defendió mejor de lo esperado.');
           }
         }
-        // ---------- Momento Ace: racha caliente propia ----------
         else if (_rachaActual(true) >= 3 && _random.nextDouble() < 0.30) {
           final resultado = await _mostrarMomentoAce();
           if (resultado != null) {
@@ -574,9 +559,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     });
   }
 
-  // ================= EVENTOS EN VIVO =================
-
-  /// Ronda 2 tras ganar la pistola: Forzar (70% éxito) o Eco (asegura ronda 3).
   Future<String?> _mostrarDecisionEconomica() {
     return showModalBottomSheet<String>(
       context: context,
@@ -630,7 +612,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     );
   }
 
-  /// Duelo 1v1 con AIM oculto. Devuelve el modificador de puntaje para la ronda.
   Future<double?> _mostrarDueloAim() async {
     if (_seleccionados.isEmpty || _rosterRival.isEmpty) return null;
     final nuestro = _seleccionados[_random.nextInt(_seleccionados.length)];
@@ -641,167 +622,222 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     final ruido = _random.nextDouble() * 14 - 7;
     final ganaNuestro = (aimNuestro + ruido) >= aimRival;
 
-    final elegido = await showModalBottomSheet<String>(
+    return showModalBottomSheet<double>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       isDismissible: false,
       enableDrag: false,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
-          decoration: BoxDecoration(
-            color: _kFondoPanel,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(color: _kAzulEvento, width: 1.5),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.gps_fixed, color: _kAzulEvento, size: 28),
-              const SizedBox(height: 8),
-              const Text(
-                'DUELO 1v1',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.0),
+      builder: (sheetContext) {
+        String? elegido;
+        bool revelado = false;
+
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            void elegir(String opcion) {
+              if (elegido != null) return;
+              setSheetState(() {
+                elegido = opcion;
+                revelado = true;
+              });
+
+              final acerto = (opcion == 'nuestro' && ganaNuestro) || (opcion == 'rival' && !ganaNuestro);
+              double resultado;
+              if (!acerto) {
+                resultado = -1.5;
+              } else if (opcion == 'nuestro' && aimNuestro < aimRival) {
+                resultado = 3.5;
+              } else {
+                resultado = 1.2;
+              }
+
+              Future.delayed(const Duration(milliseconds: 1100), () {
+                if (Navigator.of(sheetContext).canPop()) {
+                  Navigator.of(sheetContext).pop(resultado);
+                }
+              });
+            }
+
+            final acerto = elegido == null
+                ? null
+                : (elegido == 'nuestro' && ganaNuestro) || (elegido == 'rival' && !ganaNuestro);
+            final espalda = acerto == true && elegido == 'nuestro' && aimNuestro < aimRival;
+
+            return Container(
+              padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
+              decoration: BoxDecoration(
+                color: _kFondoPanel,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                border: Border.all(color: _kAzulEvento, width: 1.5),
               ),
-              const SizedBox(height: 6),
-              const Text(
-                'El AIM de ambos está oculto. ¿Quién gana el duelo?\nAcertar con la carta inferior activa una jugada por la espalda.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: _kTextoSuave, fontSize: 12.5),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _duelistaOculto('${nuestro['nombre'] ?? 'Nuestro'}', _kDorado,
-                      () => Navigator.of(context).pop('nuestro')),
-                  const Text('VS', style: TextStyle(color: Colors.white38, fontWeight: FontWeight.bold)),
-                  _duelistaOculto('${rival['nombre'] ?? 'Rival'}', _kRojo,
-                      () => Navigator.of(context).pop('rival')),
+                  const Icon(Icons.gps_fixed, color: _kAzulEvento, size: 28),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'DUELO 1v1',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.0),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    revelado
+                        ? (espalda
+                            ? '¡Leíste el duelo como el claro underdog!'
+                            : (acerto! ? 'Leíste bien el duelo.' : 'No acertaste el duelo.'))
+                        : 'El AIM de ambos está oculto. ¿Quién gana el duelo?',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: _kTextoSuave, fontSize: 12.5),
+                  ),
+                  const SizedBox(height: 26),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () => elegir('nuestro'),
+                        child: _CartaConStatOculta(
+                          jugador: nuestro,
+                          etiquetaStat: 'AIM',
+                          valorStat: aimNuestro,
+                          width: 112,
+                          revelado: revelado,
+                          destacado: revelado && ganaNuestro,
+                          colorDestacado: _kDorado,
+                        ),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.only(top: 42.0),
+                        child: Text('VS', style: TextStyle(color: Colors.white38, fontWeight: FontWeight.bold)),
+                      ),
+                      GestureDetector(
+                        onTap: () => elegir('rival'),
+                        child: _CartaConStatOculta(
+                          jugador: rival,
+                          etiquetaStat: 'AIM',
+                          valorStat: aimRival,
+                          width: 112,
+                          revelado: revelado,
+                          destacado: revelado && !ganaNuestro,
+                          colorDestacado: _kRojo,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (revelado) ...[
+                    const SizedBox(height: 26),
+                    _BannerResultadoEvento(
+                      acerto: acerto!,
+                      textoAcerto: espalda ? '¡JUGADA POR LA ESPALDA!' : 'ACERTASTE EL DUELO',
+                      textoFalla: 'NO ACERTASTE',
+                    ),
+                  ],
                 ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
-
-    if (elegido == null) return 0;
-    final acerto = (elegido == 'nuestro' && ganaNuestro) || (elegido == 'rival' && !ganaNuestro);
-    if (!acerto) return -1.5;
-    if (elegido == 'nuestro' && aimNuestro < aimRival) return 3.5;
-    return 1.2;
   }
 
-  Widget _duelistaOculto(String nombre, Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 78,
-            height: 78,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _kFondo,
-              border: Border.all(color: color, width: 2),
-            ),
-            child: Icon(Icons.lock_outline, color: color, size: 28),
-          ),
-          const SizedBox(height: 6),
-          SizedBox(
-            width: 90,
-            child: Text(
-              nombre,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12.5),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Clutch 1vX con CLU oculto. Devuelve el modificador de puntaje.
   Future<double?> _mostrarClutch() async {
-    final numRivales = _random.nextBool() ? 2 : 3;
-    final fuerzas = List.generate(numRivales, (_) => _random.nextDouble());
-    final indiceMasDebil = fuerzas.indexOf(fuerzas.reduce(min));
+    if (_rosterRival.isEmpty) return null;
+    final numRivales = (_rosterRival.length >= 3 && _random.nextBool()) ? 3 : min(2, _rosterRival.length);
+    final rivales = (List<Map<String, dynamic>>.from(_rosterRival)..shuffle(_random)).take(numRivales).toList();
+    final clus = rivales.map((r) => ((r['clu'] ?? 50) as num).toDouble()).toList();
+    final indiceMasDebil = clus.indexOf(clus.reduce(min));
 
-    final eleccion = await showModalBottomSheet<int>(
+    return showModalBottomSheet<double>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       isDismissible: false,
       enableDrag: false,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
-          decoration: BoxDecoration(
-            color: _kFondoPanel,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(color: _kRojo, width: 1.5),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.warning_amber_rounded, color: _kRojo, size: 30),
-              const SizedBox(height: 8),
-              Text(
-                'CLUTCH 1v$numRivales',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.0),
+      builder: (sheetContext) {
+        int? elegido;
+        bool revelado = false;
+
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            void elegir(int i) {
+              if (elegido != null) return;
+              setSheetState(() {
+                elegido = i;
+                revelado = true;
+              });
+
+              final resultado = i == indiceMasDebil ? 2.2 : -1.0;
+              Future.delayed(const Duration(milliseconds: 1100), () {
+                if (Navigator.of(sheetContext).canPop()) {
+                  Navigator.of(sheetContext).pop(resultado);
+                }
+              });
+            }
+
+            final acerto = elegido == null ? null : elegido == indiceMasDebil;
+
+            return Container(
+              padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
+              decoration: BoxDecoration(
+                color: _kFondoPanel,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                border: Border.all(color: _kRojo, width: 1.5),
               ),
-              const SizedBox(height: 6),
-              const Text(
-                'La estadística CLUTCH de los rivales está oculta.\n¿A cuál enfrentas primero?',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: _kTextoSuave, fontSize: 12.5),
-              ),
-              const SizedBox(height: 18),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 14,
-                runSpacing: 14,
-                children: List.generate(numRivales, (i) {
-                  final letra = String.fromCharCode(65 + i);
-                  return GestureDetector(
-                    onTap: () => Navigator.of(context).pop(i),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 66,
-                          height: 66,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _kFondo,
-                            border: Border.all(color: _kRojo, width: 2),
-                          ),
-                          child: const Icon(Icons.person, color: Colors.white54, size: 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: _kRojo, size: 30),
+                  const SizedBox(height: 8),
+                  Text(
+                    'CLUTCH 1v$numRivales',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.0),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    revelado
+                        ? (acerto! ? '¡Leíste bien al rival más débil!' : 'Te enfrentaste al rival equivocado.')
+                        : 'La estadística CLUTCH de los rivales está oculta.\n¿A cuál enfrentas primero?',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: _kTextoSuave, fontSize: 12.5),
+                  ),
+                  const SizedBox(height: 26),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 14,
+                    runSpacing: 28,
+                    children: List.generate(numRivales, (i) {
+                      return GestureDetector(
+                        onTap: () => elegir(i),
+                        child: _CartaConStatOculta(
+                          jugador: rivales[i],
+                          etiquetaStat: 'CLU',
+                          valorStat: clus[i],
+                          width: 96,
+                          revelado: revelado,
+                          destacado: revelado && i == indiceMasDebil,
+                          colorDestacado: _kDorado,
                         ),
-                        const SizedBox(height: 6),
-                        Text('Rival $letra',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                      ],
+                      );
+                    }),
+                  ),
+                  if (revelado) ...[
+                    const SizedBox(height: 26),
+                    _BannerResultadoEvento(
+                      acerto: acerto!,
+                      textoAcerto: '¡CLUTCH GANADO!',
+                      textoFalla: 'CLUTCH PERDIDO',
                     ),
-                  );
-                }),
+                  ],
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
-
-    if (eleccion == null) return 0;
-    return eleccion == indiceMasDebil ? 2.2 : -1.0;
   }
 
-  /// Rival viene de mala economía: Rushear (alto riesgo) o jugar con calma.
   Future<double?> _mostrarAntiEco() {
     return showModalBottomSheet<double>(
       context: context,
@@ -855,7 +891,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     );
   }
 
-  /// Racha caliente propia: buscar el ace o cerrar la ronda seguro.
   Future<double?> _mostrarMomentoAce() {
     return showModalBottomSheet<double>(
       context: context,
@@ -951,8 +986,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
       ),
     );
   }
-
-  // ================= UI =================
 
   @override
   Widget build(BuildContext context) {
@@ -1562,6 +1595,150 @@ class _SelectorCartasSheet extends StatelessWidget {
           const SizedBox(height: 6),
           _puntitos(quimicaPreview(carta)),
         ],
+      ),
+    );
+  }
+}
+
+class _CartaConStatOculta extends StatelessWidget {
+  final Map<String, dynamic> jugador;
+  final String etiquetaStat;
+  final num valorStat;
+  final double width;
+  final bool revelado;
+  final bool destacado;
+  final Color colorDestacado;
+
+  const _CartaConStatOculta({
+    required this.jugador,
+    required this.etiquetaStat,
+    required this.valorStat,
+    required this.width,
+    required this.revelado,
+    this.destacado = false,
+    this.colorDestacado = _kDorado,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.bottomCenter,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: (destacado ? colorDestacado : Colors.black).withOpacity(destacado ? 0.55 : 0.25),
+                    blurRadius: destacado ? 16 : 8,
+                  ),
+                ],
+              ),
+              child: CartaWidget(jugador: jugador, width: width, mostrarStats: false),
+            ),
+            Positioned(
+              bottom: -16,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                child: Container(
+                  key: ValueKey(revelado),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _kFondo,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: revelado && destacado ? colorDestacado : Colors.white38,
+                      width: 1.5,
+                    ),
+                    boxShadow: revelado && destacado
+                        ? [BoxShadow(color: colorDestacado.withOpacity(0.5), blurRadius: 8)]
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('$etiquetaStat  ',
+                          style: const TextStyle(color: Colors.white54, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                      Text(
+                        revelado ? '${valorStat.round()}' : '?',
+                        style: TextStyle(
+                          color: revelado ? (destacado ? colorDestacado : Colors.white) : Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 22),
+        SizedBox(
+          width: width,
+          child: Text(
+            '${jugador['nombre'] ?? ''}',
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12.5),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BannerResultadoEvento extends StatelessWidget {
+  final bool acerto;
+  final String textoAcerto;
+  final String textoFalla;
+
+  const _BannerResultadoEvento({
+    required this.acerto,
+    required this.textoAcerto,
+    required this.textoFalla,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = acerto ? _kDorado : _kRojo;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOut,
+      builder: (context, valor, child) {
+        return Opacity(
+          opacity: valor,
+          child: Transform.scale(scale: 0.9 + (0.1 * valor), child: child),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.6), width: 1.2),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(acerto ? Icons.check_circle : Icons.cancel, color: color, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              acerto ? textoAcerto : textoFalla,
+              style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 13.5, letterSpacing: 0.4),
+            ),
+          ],
+        ),
       ),
     );
   }

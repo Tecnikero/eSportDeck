@@ -4,13 +4,8 @@ import '../providers/perfil_provider.dart';
 
 const Color _kDorado = Color(0xFFFFD700);
 const Color _kFondoPanel = Color(0xFF11172A);
-
-/// Recompensas visibles del ciclo de 7 días, usadas solo para pintar la
-/// tira de días (el monto real lo entrega PerfilProvider).
 const List<int> _recompensasVisibles = [50, 60, 75, 90, 110, 140, 250];
 
-/// Muestra el diálogo de recompensa diaria si todavía no se reclamó hoy.
-/// Se debe llamar después de que PerfilProvider.cargar() haya terminado.
 Future<void> mostrarRachaDiariaSiCorresponde(BuildContext context) async {
   final perfil = context.read<PerfilProvider>();
   if (!perfil.recompensaDiariaDisponible) return;
@@ -48,8 +43,9 @@ class _RachaDialogState extends State<_RachaDialog> {
   @override
   Widget build(BuildContext context) {
     final perfil = context.watch<PerfilProvider>();
-    // Día que se está a punto de reclamar (1-7).
-    final diaObjetivo = (perfil.rachaDias % 7) + (_recompensaObtenida != null ? 0 : 1);
+    final diaObjetivo = _recompensaObtenida == null
+        ? (perfil.rachaDias % 7) + 1
+        : ((perfil.rachaDias - 1) % 7) + 1;
 
     return Dialog(
       backgroundColor: _kFondoPanel,
@@ -79,8 +75,10 @@ class _RachaDialogState extends State<_RachaDialog> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(7, (i) {
                 final dia = i + 1;
-                final activo = dia == diaObjetivo.clamp(1, 7);
-                final completado = dia < diaObjetivo.clamp(1, 7);
+                final diaRef = diaObjetivo.clamp(1, 7);
+                final activo = _recompensaObtenida == null && dia == diaRef;
+                final completado =
+                    _recompensaObtenida != null ? dia <= diaRef : dia < diaRef;
                 final esJackpot = dia == 7;
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 3),

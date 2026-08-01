@@ -7,7 +7,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Compara dos versiones tipo "1.3.0" -> 1 si a > b, -1 si a < b, 0 si iguales.
 int _compararVersiones(String a, String b) {
   final pa = a.split('.').map((s) => int.tryParse(s) ?? 0).toList();
   final pb = b.split('.').map((s) => int.tryParse(s) ?? 0).toList();
@@ -44,8 +43,6 @@ class ActualizacionProvider extends ChangeNotifier {
       _versionInstalada != null &&
       _compararVersiones(_versionMinima!, _versionInstalada!) > 0;
 
-  /// true si el usuario dijo "ahora no" pero sigue habiendo una versión nueva:
-  /// úsalo para mostrar la flechita pendiente en el AppBar.
   bool _pospuesta = false;
   bool get actualizacionPendiente => _pospuesta && hayActualizacionDisponible;
 
@@ -135,7 +132,6 @@ class ActualizacionProvider extends ChangeNotifier {
     }
   }
 
-  /// Reintenta abrir el instalador si ya se había descargado antes.
   Future<void> instalarDeNuevoSiYaEstaDescargado() async {
     final ruta = _rutaApkDescargado;
     if (ruta == null || !File(ruta).existsSync()) {
