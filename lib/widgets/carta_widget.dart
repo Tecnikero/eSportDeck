@@ -6,7 +6,24 @@ class CartaWidget extends StatelessWidget {
   final double width;
   final bool mostrarStats;
 
-  const CartaWidget({super.key, required this.jugador, this.width = 260, this.mostrarStats = true});
+  /// Controles opcionales de revelación por capas (para la animación de
+  /// apertura de sobres). Por defecto todo vale 1.0 y la carta se ve
+  /// completa de inmediato, como en cualquier otro lugar de la app.
+  final double opacidadRegion;
+  final double opacidadEquipo;
+  final double opacidadPosicion;
+  final double opacidadResto; // foto, OVR, nombre y stats
+
+  const CartaWidget({
+    super.key,
+    required this.jugador,
+    this.width = 260,
+    this.mostrarStats = true,
+    this.opacidadRegion = 1.0,
+    this.opacidadEquipo = 1.0,
+    this.opacidadPosicion = 1.0,
+    this.opacidadResto = 1.0,
+  });
 
   static const double _aspectRatio = 626 / 794;
 
@@ -79,7 +96,9 @@ class CartaWidget extends StatelessWidget {
                     left: 0,
                     right: 0,
                     height: alturaFoto - (h * 0.035),
-                    child: ClipRect(
+                    child: Opacity(
+                      opacity: opacidadResto,
+                      child: ClipRect(
                       child: (jugador['imagen_url'] != null &&
                               '${jugador['imagen_url']}'.isNotEmpty)
                           ? ShaderMask(
@@ -126,6 +145,7 @@ class CartaWidget extends StatelessWidget {
                                 color: Colors.white.withOpacity(0.6),
                               ),
                             ),
+                      ),
                     ),
                   ),
 
@@ -139,26 +159,32 @@ class CartaWidget extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            '${jugador['ovr'] ?? '--'}',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: w * 0.1,
-                              height: 1.0,
-                              shadows: const [Shadow(color: Colors.black87, blurRadius: 6)],
+                          Opacity(
+                            opacity: opacidadResto,
+                            child: Text(
+                              '${jugador['ovr'] ?? '--'}',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: w * 0.1,
+                                height: 1.0,
+                                shadows: const [Shadow(color: Colors.black87, blurRadius: 6)],
+                              ),
                             ),
                           ),
-                          Text(
-                            '${jugador['posicion'] ?? ''}'.toUpperCase(),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontWeight: FontWeight.w800,
-                              fontSize: w * 0.04,
-                              letterSpacing: 0.6,
-                              shadows: const [Shadow(color: Colors.black87, blurRadius: 4)],
+                          Opacity(
+                            opacity: opacidadPosicion,
+                            child: Text(
+                              '${jugador['posicion'] ?? ''}'.toUpperCase(),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w800,
+                                fontSize: w * 0.04,
+                                letterSpacing: 0.6,
+                                shadows: const [Shadow(color: Colors.black87, blurRadius: 4)],
+                              ),
                             ),
                           ),
                         ],
@@ -172,16 +198,22 @@ class CartaWidget extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _logoWidget(
-                          imagePath: 'assets/valorant/equipos/${(jugador['region'] ?? 'default').toString().toLowerCase()}/${(jugador['equipo'] ?? 'default').toString().toLowerCase()}.png',
-                          label: '${jugador['equipo'] ?? 'Equipo'}',
-                          size: w * 0.12,
+                        Opacity(
+                          opacity: opacidadEquipo,
+                          child: _logoWidget(
+                            imagePath: 'assets/valorant/equipos/${(jugador['region'] ?? 'default').toString().toLowerCase()}/${(jugador['equipo'] ?? 'default').toString().toLowerCase()}.png',
+                            label: '${jugador['equipo'] ?? 'Equipo'}',
+                            size: w * 0.12,
+                          ),
                         ),
                         SizedBox(height: h * 0.012),
-                        _logoWidget(
-                          imagePath: 'assets/valorant/regiones/${(jugador['region'] ?? 'default').toString().toLowerCase()}.png',
-                          label: '${jugador['region'] ?? 'Region'}',
-                          size: w * 0.12,
+                        Opacity(
+                          opacity: opacidadRegion,
+                          child: _logoWidget(
+                            imagePath: 'assets/valorant/regiones/${(jugador['region'] ?? 'default').toString().toLowerCase()}.png',
+                            label: '${jugador['region'] ?? 'Region'}',
+                            size: w * 0.12,
+                          ),
                         ),
                       ],
                     ),
@@ -191,17 +223,20 @@ class CartaWidget extends StatelessWidget {
                     top: alturaFoto - (w * 0.08),
                     left: w * 0.08,
                     right: w * 0.08,
-                    child: Text(
-                      '${jugador['nombre'] ?? 'Nombre'}'.toUpperCase(),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: w * 0.07,
-                        letterSpacing: 0.5,
-                        shadows: const [Shadow(color: Colors.black87, blurRadius: 6)],
+                    child: Opacity(
+                      opacity: opacidadResto,
+                      child: Text(
+                        '${jugador['nombre'] ?? 'Nombre'}'.toUpperCase(),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: w * 0.07,
+                          letterSpacing: 0.5,
+                          shadows: const [Shadow(color: Colors.black87, blurRadius: 6)],
+                        ),
                       ),
                     ),
                   ),
@@ -212,7 +247,9 @@ class CartaWidget extends StatelessWidget {
                       left: w * 0.18,
                       right: w * 0.18,
                       bottom: h * 0.07,
-                      child: Column(
+                      child: Opacity(
+                        opacity: opacidadResto,
+                        child: Column(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           Row(
@@ -232,6 +269,7 @@ class CartaWidget extends StatelessWidget {
                             ],
                           ),
                         ],
+                        ),
                       ),
                     ),
                 ],

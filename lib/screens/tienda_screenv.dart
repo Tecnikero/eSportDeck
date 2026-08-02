@@ -5,10 +5,6 @@ import '../providers/perfil_provider.dart';
 import '../widgets/racha_dialog.dart';
 
 
-// Las probabilidades (peso) están expresadas directamente como porcentaje
-// (cada lista de tramos suma 100) para que coincidan exactamente con la
-// tabla de drop rates. 'efecto' usa las mismas claves que reconoce
-// SobreDetalleScreen: ninguno=Común, plata=Rara, violeta=Épica, dorado=Legendaria.
 const List<Map<String, dynamic>> _tramosBasico = [
   {'min': 0, 'max': 80, 'peso': 70, 'efecto': 'ninguno'},
   {'min': 81, 'max': 88, 'peso': 24, 'efecto': 'plata'},
@@ -16,12 +12,6 @@ const List<Map<String, dynamic>> _tramosBasico = [
   {'min': 92, 'max': 99, 'peso': 1, 'efecto': 'dorado'},
 ];
 
-const List<Map<String, dynamic>> _tramosPremium = [
-  {'min': 0, 'max': 80, 'peso': 40, 'efecto': 'ninguno'},
-  {'min': 81, 'max': 88, 'peso': 40, 'efecto': 'plata'},
-  {'min': 89, 'max': 91, 'peso': 17, 'efecto': 'violeta'},
-  {'min': 92, 'max': 99, 'peso': 3, 'efecto': 'dorado'},
-];
 
 const List<Map<String, dynamic>> tiposSobre = [
   {
@@ -36,19 +26,6 @@ const List<Map<String, dynamic>> tiposSobre = [
     'tramos': _tramosBasico,
     'garantia': false,
     'descripcion': '2 cartas aleatorias del catálogo.\nComún 70% · Rara 24% · Épica 5% · Legendaria 1%.',
-  },
-  {
-    'id': 'premium',
-    'nombre': 'Sobre Premium',
-    'precio': 5000,
-    'cantidad_cartas': 2,
-    'icono': Icons.workspace_premium,
-    'imagen': 'assets/valorant/sobres/sobres-beta.png',
-    'color': Color(0xFFFFD700),
-    'rarezas': ['Normal', 'champions', 'finals_champions'],
-    'tramos': _tramosPremium,
-    'garantia': true,
-    'descripcion': 'Garantiza al menos 1 carta Épica o superior.\nComún 40% · Rara 40% · Épica 17% · Legendaria 3%.',
   },
 ];
 
@@ -222,18 +199,20 @@ class _TiendaScreenState extends State<TiendaScreen> {
     );
   }
 
+  // La legendaria ya no tiene pity (es 100% suerte), así que este
+  // indicador ahora muestra el progreso hacia la épica garantizada.
   Widget _indicadorPity(String sobreId) {
-    const doradoMax = 30;
+    const epicaMax = 8;
     return Consumer<PerfilProvider>(
       builder: (context, perfil, _) {
-        final pityDorado = perfil.obtenerPity(sobreId, 'dorado');
-        final faltan = (doradoMax - pityDorado).clamp(0, doradoMax);
+        final pityEpica = perfil.obtenerPity(sobreId, 'violeta');
+        final faltan = (epicaMax - pityEpica).clamp(0, epicaMax);
         return Text(
-          faltan <= 3 ? '¡Legendaria a $faltan sobres!' : 'Legendaria en $faltan',
+          faltan <= 2 ? '¡Épica a $faltan sobres!' : 'Épica en $faltan',
           style: TextStyle(
-            color: faltan <= 3 ? const Color(0xFFFFD700) : Colors.white38,
+            color: faltan <= 2 ? const Color(0xFF9B59B6) : Colors.white38,
             fontSize: 10.5,
-            fontWeight: faltan <= 3 ? FontWeight.bold : FontWeight.normal,
+            fontWeight: faltan <= 2 ? FontWeight.bold : FontWeight.normal,
           ),
         );
       },

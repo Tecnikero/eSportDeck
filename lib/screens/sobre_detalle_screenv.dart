@@ -70,6 +70,10 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   late final Animation<double> _escalaDestello;
   late final Animation<double> _opacidadDestello;
 
+  /// Controla la revelación por etapas de la mejor carta obtenida:
+  /// región -> equipo -> posición -> carta completa.
+  late final AnimationController _revelado;
+
   bool _comprando = false;
   bool _comprado = false;
   bool _abriendo = false;
@@ -81,20 +85,17 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   ui.Image? _logoImagenCruda;
 
   // ---------- SISTEMA DE PITY (protección contra mala suerte) ----------
-  // Tras abrir este número de sobres sin obtener la rareza indicada, el
-  // próximo sobre garantiza esa rareza. Es la mecánica clave para que
-  // el jugador nunca sienta que "nunca le toca nada bueno".
-  static const int _pityDoradoMax = 30;
+  // Tras abrir este número de sobres sin obtener una carta épica, el
+  // próximo sobre la garantiza. La legendaria NO tiene pity: es 100%
+  // suerte, según su probabilidad definida en los tramos.
   static const int _pityVioletaMax = 8;
 
-  int _pityDorado = 0;
   int _pityVioleta = 0;
 
   String get _sobreId => '${widget.sobre['id'] ?? widget.sobre['nombre']}';
 
   void _cargarPity() {
     final perfil = context.read<PerfilProvider>();
-    _pityDorado = perfil.obtenerPity(_sobreId, 'dorado');
     _pityVioleta = perfil.obtenerPity(_sobreId, 'violeta');
   }
 
@@ -155,6 +156,9 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 90),
     ]).animate(CurvedAnimation(parent: _rasgado, curve: const Interval(0.4, 1.0)));
 
+    _revelado = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 2200));
+
     _cargarImagenLogo();
     _cargarPity();
   }
@@ -165,6 +169,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     _fondoController.dispose();
     _efecto.dispose();
     _rasgado.dispose();
+    _revelado.dispose();
     super.dispose();
   }
 
@@ -216,27 +221,19 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     return pool[_random.nextInt(pool.length)];
   }
 
-  /// Actualiza los contadores de pity según lo obtenido en esta apertura y,
-  /// si se alcanzó el tope sin la rareza correspondiente, reemplaza la última
-  /// carta revelada por una garantizada de esa rareza.
+  /// Actualiza el contador de pity de la épica según lo obtenido en esta
+  /// apertura y, si se alcanzó el tope sin sacar épica (o mejor), reemplaza
+  /// la última carta revelada por una épica garantizada. La legendaria no
+  /// participa de esto: sale (o no) 100% al azar según su probabilidad.
   void _aplicarPity(List<Map<String, dynamic>> elegidas, List<Map<String, dynamic>> poolRestante) {
-    final huboDorado = elegidas.any((j) => _efectoDeCarta(j) == _EfectoRareza.dorado);
     final huboVioletaOMejor = elegidas.any((j) {
       final e = _efectoDeCarta(j);
       return e == _EfectoRareza.violeta || e == _EfectoRareza.dorado;
     });
 
-    _pityDorado = huboDorado ? 0 : _pityDorado + elegidas.length;
     _pityVioleta = huboVioletaOMejor ? 0 : _pityVioleta + elegidas.length;
 
-    if (_pityDorado >= _pityDoradoMax && !huboDorado && poolRestante.isNotEmpty) {
-      elegidas[elegidas.length - 1] = _elegirCartaPonderada(
-        poolRestante,
-        tramosPermitidos: {_EfectoRareza.dorado},
-      );
-      _pityDorado = 0;
-      _pityVioleta = 0;
-    } else if (_pityVioleta >= _pityVioletaMax && !huboVioletaOMejor && poolRestante.isNotEmpty) {
+    if (_pityVioleta >= _pityVioletaMax && !huboVioletaOMejor && poolRestante.isNotEmpty) {
       elegidas[elegidas.length - 1] = _elegirCartaPonderada(
         poolRestante,
         tramosPermitidos: {_EfectoRareza.violeta},
@@ -350,7 +347,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       if (mounted) {
         await context.read<PerfilProvider>().actualizarPity(
           _sobreId,
-          {'dorado': _pityDorado, 'violeta': _pityVioleta},
+          {'violeta': _pityVioleta},
         );
       }
 
@@ -393,15 +390,21 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       _efecto.duration = _duracionEfecto(efecto);
       await _efecto.forward(from: 0);
       if (!mounted) return;
+
+      // El efecto de rareza se mantiene activo durante el rasgado para que
+      // el propio sobre se abra de forma distinta según lo que trae dentro
+      // (partido en dos para épicas, estallando en fragmentos para
+      // legendarias, el rasgado clásico para el resto).
+      await _rasgado.forward(from: 0);
+      if (!mounted) return;
       setState(() => _efectoActivo = _EfectoRareza.ninguno);
 
-      await _rasgado.forward(from: 0);
-
-      if (!mounted) return;
+      _revelado.duration = _duracionRevelado(efecto);
       setState(() {
         _cartasReveladas = elegidas;
         _abriendo = false;
       });
+      _revelado.forward(from: 0);
     } catch (e) {
       debugPrint('ERROR AL ABRIR SOBRE: $e');
       if (!mounted) return;
@@ -466,7 +469,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       if (mounted) {
         await context.read<PerfilProvider>().actualizarPity(
           _sobreId,
-          {'dorado': _pityDorado, 'violeta': _pityVioleta},
+          {'violeta': _pityVioleta},
         );
         context.read<PerfilProvider>().actualizarDinero(dineroActual - precioBulk);
       }
@@ -518,8 +521,10 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   Widget build(BuildContext context) {
     final sobre = widget.sobre;
     final color = sobre['color'] as Color;
-    final mostrandoSobreParaAbrir =
-        _cartasReveladas.isEmpty && _comprado;
+    // Estas capas (sólido -> efecto -> foto VCT) se mantienen visibles
+    // desde que se compra el sobre y durante toda la revelación de
+    // cartas, para no perder la coherencia visual del fondo.
+    final mostrandoFondoDeApertura = _comprado;
 
     return Scaffold(
       backgroundColor: const Color(0xFF000000),
@@ -539,7 +544,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       body: Stack(
         children: [
           Positioned.fill(child: _buildFondoLogoVCT()),
-          if (mostrandoSobreParaAbrir) ...[
+          if (mostrandoFondoDeApertura) ...[
             Positioned.fill(child: _buildCapaFondoSolido(color)),
             Positioned.fill(child: _buildCapaBrillo(color)),
             Positioned.fill(child: _buildCapaFoto()),
@@ -600,6 +605,29 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       case _EfectoRareza.ninguno:
         return const Duration(milliseconds: 900);
     }
+  }
+
+  /// Duración de la secuencia región -> equipo -> posición -> resto.
+  /// Incluso una carta común recorre las 4 etapas; nunca aparece de golpe.
+  Duration _duracionRevelado(_EfectoRareza efecto) {
+    switch (efecto) {
+      case _EfectoRareza.dorado:
+        return const Duration(milliseconds: 3800);
+      case _EfectoRareza.violeta:
+        return const Duration(milliseconds: 3300);
+      case _EfectoRareza.plata:
+        return const Duration(milliseconds: 2800);
+      case _EfectoRareza.ninguno:
+        // Carta común: sin suspenso, aparece prácticamente de una.
+        return const Duration(milliseconds: 500);
+    }
+  }
+
+  /// Ruta del logo de la región para el banner de impacto que aparece
+  /// arriba de la carta cuando el efecto es especial (plata/violeta/dorado).
+  String _rutaRegion(Map<String, dynamic> jugador) {
+    final region = '${jugador['region'] ?? 'default'}'.toLowerCase();
+    return 'assets/valorant/regiones/$region.png';
   }
 
   Color _getColorEfectoActivo() {
@@ -1072,11 +1100,10 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   }
 
   /// Muestra cuánto le falta al jugador para que el sistema le garantice
-  /// una carta épica o legendaria. Ver el progreso es lo que mantiene a
-  /// alguien abriendo "uno más" incluso tras una mala racha.
+  /// una carta épica. La legendaria queda fuera de este panel a propósito:
+  /// no tiene pity, sale 100% al azar según su probabilidad.
   Widget _buildPanelPity(Color color) {
     final faltanViolestas = (_pityVioletaMax - _pityVioleta).clamp(0, _pityVioletaMax);
-    final faltanDorados = (_pityDoradoMax - _pityDorado).clamp(0, _pityDoradoMax);
 
     return Container(
       width: double.infinity,
@@ -1086,22 +1113,11 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white12),
       ),
-      child: Column(
-        children: [
-          _filaPity(
-            'Épica garantizada en',
-            faltanViolestas,
-            _pityVioleta / _pityVioletaMax,
-            const Color(0xFF9B59B6),
-          ),
-          const SizedBox(height: 10),
-          _filaPity(
-            'Legendaria garantizada en',
-            faltanDorados,
-            _pityDorado / _pityDoradoMax,
-            const Color(0xFFFFD700),
-          ),
-        ],
+      child: _filaPity(
+        'Épica garantizada en',
+        faltanViolestas,
+        _pityVioleta / _pityVioletaMax,
+        const Color(0xFF9B59B6),
       ),
     );
   }
@@ -1199,6 +1215,142 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     );
   }
 
+  /// Elige cómo se abre el sobre según la rareza de lo que hay dentro.
+  /// Común/rara usan el rasgado clásico; épica se parte en dos mitades;
+  /// legendaria estalla en fragmentos dorados.
+  Widget _visualAperturaSobre(Map<String, dynamic> sobre, Color color) {
+    switch (_efectoActivo) {
+      case _EfectoRareza.dorado:
+        return _aperturaExplosiva(
+          sobre, color, const Color(0xFFFFD700),
+          fragmentos: 12, fuerza: 1.0,
+        );
+      case _EfectoRareza.violeta:
+        return _aperturaPartida(sobre, color);
+      case _EfectoRareza.plata:
+        return _aperturaExplosiva(
+          sobre, color, Colors.white,
+          fragmentos: 6, fuerza: 0.55,
+        );
+      case _EfectoRareza.ninguno:
+        return _aperturaComun(sobre, color);
+    }
+  }
+
+  /// Apertura clásica: el sobre tiembla, crece y se desvanece encogiéndose.
+  Widget _aperturaComun(Map<String, dynamic> sobre, Color color) {
+    return Opacity(
+      opacity: _opacidadSobre.value,
+      child: Transform.rotate(
+        angle: _temblor.value,
+        child: Transform.scale(
+          scale: _escalaSobre.value,
+          child: _imagenSobre(sobre, color, 320),
+        ),
+      ),
+    );
+  }
+
+  /// El sobre se parte en dos mitades que se separan girando, dejando
+  /// asomar el destello de la carta épica que trae dentro.
+  Widget _aperturaPartida(Map<String, dynamic> sobre, Color color) {
+    final t = Curves.easeInCubic.transform(_rasgado.value.clamp(0.0, 1.0));
+    final desplazar = t * 210;
+    final rotar = t * 0.55;
+    final opacidad =
+        (1 - ((_rasgado.value - 0.55).clamp(0.0, 0.45) / 0.45)).clamp(0.0, 1.0);
+
+    return Opacity(
+      opacity: opacidad,
+      child: Transform.rotate(
+        angle: _temblor.value,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Transform.translate(
+              offset: Offset(-desplazar, -desplazar * 0.25),
+              child: Transform.rotate(
+                angle: -rotar,
+                child: ClipRect(
+                  clipper: _MitadSobreClipper(izquierda: true),
+                  child: _imagenSobre(sobre, color, 320),
+                ),
+              ),
+            ),
+            Transform.translate(
+              offset: Offset(desplazar, desplazar * 0.25),
+              child: Transform.rotate(
+                angle: rotar,
+                child: ClipRect(
+                  clipper: _MitadSobreClipper(izquierda: false),
+                  child: _imagenSobre(sobre, color, 320),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// El sobre estalla en fragmentos que salen disparados desde el centro.
+  /// Se usa tanto para rara (pocos fragmentos, poca fuerza) como para
+  /// legendaria (más fragmentos, más fuerza y color dorado).
+  Widget _aperturaExplosiva(
+    Map<String, dynamic> sobre,
+    Color color,
+    Color colorFragmentos, {
+    required int fragmentos,
+    required double fuerza,
+  }) {
+    final t = Curves.easeOutExpo.transform(_rasgado.value.clamp(0.0, 1.0));
+    final escala = 1.0 + t * 0.5 * fuerza;
+    final opacidadSobre = (1 - (_rasgado.value * 1.4)).clamp(0.0, 1.0);
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        ...List.generate(fragmentos, (i) {
+          final anguloBase = (i / fragmentos) * 2 * pi;
+          final distancia = t * (200 + (i % 3) * 30) * fuerza;
+          final giro = t * (i.isEven ? 5.0 : -5.0);
+          final tam = 30.0 - (i % 4) * 4;
+          final opacidadFrag = (1 - t).clamp(0.0, 1.0);
+          return Transform.translate(
+            offset: Offset(cos(anguloBase) * distancia, sin(anguloBase) * distancia),
+            child: Transform.rotate(
+              angle: giro,
+              child: Opacity(
+                opacity: opacidadFrag,
+                child: Container(
+                  width: tam,
+                  height: tam * 1.3,
+                  decoration: BoxDecoration(
+                    color: colorFragmentos.withOpacity(0.85),
+                    borderRadius: BorderRadius.circular(4),
+                    boxShadow: [
+                      BoxShadow(color: colorFragmentos.withOpacity(0.6), blurRadius: 12),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+        Transform.rotate(
+          angle: _temblor.value + t * pi * 0.25 * fuerza,
+          child: Transform.scale(
+            scale: escala,
+            child: Opacity(
+              opacity: opacidadSobre,
+              child: _imagenSobre(sobre, color, 320),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSobreParaAbrir(Map<String, dynamic> sobre, Color color) {
     return GestureDetector(
       onTap: _abrirSobre,
@@ -1243,27 +1395,16 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                       ),
 
                       AnimatedBuilder(
-                        animation: _rasgado,
+                        animation: Listenable.merge([_rasgado, _pulso]),
                         builder: (context, child) {
-                          return Opacity(
-                            opacity: _abriendo ? _opacidadSobre.value : 1,
-                            child: Transform.rotate(
-                              angle: _abriendo ? _temblor.value : 0,
-                              child: Transform.scale(
-                                scale: _abriendo ? _escalaSobre.value : 1,
-                                child: child,
-                              ),
-                            ),
-                          );
+                          if (!_abriendo) {
+                            return Transform.scale(
+                              scale: _escalaPulso.value,
+                              child: _imagenSobre(sobre, color, 320),
+                            );
+                          }
+                          return _visualAperturaSobre(sobre, color);
                         },
-                        child: AnimatedBuilder(
-                          animation: _pulso,
-                          builder: (context, child) => Transform.scale(
-                            scale: _abriendo ? 1 : _escalaPulso.value,
-                            child: child,
-                          ),
-                          child: _imagenSobre(sobre, color, 320),
-                        ),
                       ),
                     ],
                   ),
@@ -1293,16 +1434,72 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     );
   }
 
+  /// Ruta del logo del equipo para el banner de la etapa "equipo".
+  String _rutaEquipo(Map<String, dynamic> jugador) {
+    final region = '${jugador['region'] ?? 'default'}'.toLowerCase();
+    final equipo = '${jugador['equipo'] ?? 'default'}'.toLowerCase();
+    return 'assets/valorant/equipos/$region/$equipo.png';
+  }
+
+  /// Opacidad + escala de una etapa tipo "insignia" dentro de una ventana
+  /// [inicio, inicio+duracion] del progreso total [t]: entra con un pop,
+  /// se mantiene, y se apaga antes de ceder paso a la siguiente etapa.
+  List<double> _pulsoEtapa(double t, double inicio, double duracion) {
+    final local = ((t - inicio) / duracion).clamp(0.0, 1.0);
+    final entrada = (local / 0.35).clamp(0.0, 1.0);
+    final salida = 1 - ((local - 0.75) / 0.25).clamp(0.0, 1.0);
+    final opacidad = Curves.easeOut.transform(entrada) * salida;
+    final escala = 0.55 + 0.45 * Curves.easeOutBack.transform(entrada);
+    return [opacidad, escala];
+  }
+
+  Widget _bannerEtapa({
+    required Widget contenido,
+    required double opacidad,
+    required double escala,
+    required Color colorGlow,
+  }) {
+    return Opacity(
+      opacity: opacidad,
+      child: Transform.scale(
+        scale: escala,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.55),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: colorGlow.withOpacity(0.9), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: colorGlow.withOpacity(0.7 * opacidad),
+                blurRadius: 40,
+                spreadRadius: 6,
+              ),
+            ],
+          ),
+          child: contenido,
+        ),
+      ),
+    );
+  }
+
+  /// Revelación de la mejor carta combinando ambos estilos: arriba flota
+  /// una insignia con lo que se está revelando (región -> equipo ->
+  /// posición), y AL MISMO TIEMPO esa misma capa se enciende sobre la
+  /// propia carta, que se va revelando en vivo. Al final, cuando ya se
+  /// vieron las tres etapas, el resto (foto, OVR, nombre, stats) aparece
+  /// con un flash y un pop, como en la apertura de sobres de FIFA/EA FC.
+  /// Las cartas comunes no tienen suspenso: aparecen directo.
   Widget _buildRevelacionInicial() {
     final mejorCarta = _cartasReveladas.first;
     final efecto = _efectoDeCarta(mejorCarta);
+    final esComun = efecto == _EfectoRareza.ninguno;
 
     Color colorGlow = Colors.transparent;
     if (efecto == _EfectoRareza.dorado) colorGlow = const Color(0xFFFFD700);
     if (efecto == _EfectoRareza.violeta) colorGlow = const Color(0xFF9B59B6);
     if (efecto == _EfectoRareza.plata) colorGlow = Colors.white;
 
-    final duracionFlip = _duracionEfecto(efecto) + const Duration(milliseconds: 200);
     final intensidadGlow = switch (efecto) {
       _EfectoRareza.dorado => 1.3,
       _EfectoRareza.violeta => 1.0,
@@ -1310,60 +1507,240 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       _EfectoRareza.ninguno => 0.0,
     };
 
+    // Ventanas de tiempo (sobre t de 0 a 1) para cada etapa, cuando el
+    // efecto no es común.
+    const double inicioRegion = 0.00;
+    const double inicioEquipo = 0.24;
+    const double inicioPosicion = 0.48;
+    const double duracionEtapa = 0.24;
+    const double inicioResto = 0.66;
+
     return GestureDetector(
-      onTap: () => setState(() => _mostrarAmbas = true),
+      onTap: () {
+        if (_revelado.isAnimating) {
+          _revelado.stop();
+          setState(() => _revelado.value = 1.0);
+          return;
+        }
+        setState(() => _mostrarAmbas = true);
+      },
       behavior: HitTestBehavior.opaque,
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0.0, end: 1.0),
-              duration: duracionFlip,
-              curve: Curves.easeOutExpo,
-              builder: (context, value, child) {
-                final angle = (1 - value) * pi; 
-                return Transform(
-                  transform: Matrix4.identity()
-                    ..setEntry(3, 2, 0.002)
-                    ..translate(0.0, 150 * (1 - value), 0.0)
-                    ..rotateY(angle),
-                  alignment: Alignment.center,
-                  child: Transform.scale(
-                    scale: value.clamp(0.0, 1.0),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        boxShadow: value > 0.6 && intensidadGlow > 0
-                            ? [
-                                BoxShadow(
-                                  color: colorGlow.withOpacity(0.8 * value * intensidadGlow.clamp(0.0, 1.0)),
-                                  blurRadius: 80 * value * intensidadGlow,
-                                  spreadRadius: 20 * value * intensidadGlow,
-                                )
-                              ]
-                            : null,
-                      ),
-                      child: Opacity(
-                        opacity: value < 0.2 ? (value * 5).clamp(0.0, 1.0) : 1.0, 
-                        child: child,
-                      ),
+        child: AnimatedBuilder(
+          animation: _revelado,
+          builder: (context, child) {
+            final t = _revelado.value;
+
+            if (esComun) {
+              // Cartas comunes: sin suspenso, sale de una sola vez.
+              final opacidadResto = Curves.easeOut.transform((t / 0.6).clamp(0.0, 1.0));
+              final opacidadTexto = ((t - 0.7) / 0.3).clamp(0.0, 1.0);
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Transform.scale(
+                    scale: 0.92 + (0.08 * opacidadResto),
+                    child: CartaWidget(
+                      jugador: mejorCarta,
+                      width: 280,
+                      opacidadRegion: 1.0,
+                      opacidadEquipo: 1.0,
+                      opacidadPosicion: 1.0,
+                      opacidadResto: opacidadResto,
                     ),
                   ),
-                );
-              },
-              child: CartaWidget(jugador: mejorCarta, width: 280),
-            ),
-            const SizedBox(height: 40),
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0.0, end: 1.0),
-              duration: const Duration(milliseconds: 800),
-              builder: (context, value, child) => Opacity(opacity: value, child: child),
-              child: const Text(
-                'Toca la pantalla para continuar',
-                style: TextStyle(color: Colors.white54, fontSize: 16, letterSpacing: 1.2),
-              ),
-            ),
-          ],
+                  const SizedBox(height: 30),
+                  Opacity(
+                    opacity: opacidadTexto,
+                    child: const Text(
+                      'Toca la pantalla para continuar',
+                      style: TextStyle(color: Colors.white54, fontSize: 16, letterSpacing: 1.2),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            // ---- Efectos especiales ----
+            // La misma curva alimenta tanto el banner flotante de la etapa
+            // como la capa correspondiente encendiéndose sobre la carta.
+            final opacidadRegion = Curves.easeOut.transform(((t - inicioRegion) / duracionEtapa).clamp(0.0, 1.0));
+            final opacidadEquipo = Curves.easeOut.transform(((t - inicioEquipo) / duracionEtapa).clamp(0.0, 1.0));
+            final opacidadPosicion = Curves.easeOut.transform(((t - inicioPosicion) / duracionEtapa).clamp(0.0, 1.0));
+
+            final bannerRegion = _pulsoEtapa(t, inicioRegion, duracionEtapa);
+            final bannerEquipo = _pulsoEtapa(t, inicioEquipo, duracionEtapa);
+            final bannerPosicion = _pulsoEtapa(t, inicioPosicion, duracionEtapa);
+
+            // ---- Etapa final: el resto de la carta aparece con flash ----
+            final localFinal = ((t - inicioResto) / (1.0 - inicioResto)).clamp(0.0, 1.0);
+            final opacidadResto = Curves.easeOut.transform((localFinal / 0.4).clamp(0.0, 1.0));
+            final opacidadFlash = opacidadResto < 1.0
+                ? Curves.easeOut.transform((localFinal / 0.18).clamp(0.0, 1.0)) *
+                    (1 - Curves.easeIn.transform((((localFinal - 0.18) / 0.22).clamp(0.0, 1.0))))
+                : 0.0;
+            final opacidadTexto = ((t - 0.96) / 0.04).clamp(0.0, 1.0);
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Insignia flotante: región -> equipo -> posición, una a la vez.
+                SizedBox(
+                  height: 56,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (bannerRegion[0] > 0)
+                        _bannerEtapa(
+                          opacidad: bannerRegion[0],
+                          escala: bannerRegion[1],
+                          colorGlow: colorGlow,
+                          contenido: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 26,
+                                height: 26,
+                                child: Image.asset(
+                                  _rutaRegion(mejorCarta),
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Icon(Icons.public, color: colorGlow, size: 22),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                '${mejorCarta['region'] ?? 'Región'}'.toUpperCase(),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                  letterSpacing: 1.2,
+                                  shadows: [Shadow(color: colorGlow, blurRadius: 12)],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (bannerEquipo[0] > 0)
+                        _bannerEtapa(
+                          opacidad: bannerEquipo[0],
+                          escala: bannerEquipo[1],
+                          colorGlow: colorGlow,
+                          contenido: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 26,
+                                height: 26,
+                                child: Image.asset(
+                                  _rutaEquipo(mejorCarta),
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Icon(Icons.shield, color: colorGlow, size: 22),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                '${mejorCarta['equipo'] ?? 'Equipo'}'.toUpperCase(),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                  letterSpacing: 1.2,
+                                  shadows: [Shadow(color: colorGlow, blurRadius: 12)],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (bannerPosicion[0] > 0)
+                        _bannerEtapa(
+                          opacidad: bannerPosicion[0],
+                          escala: bannerPosicion[1],
+                          colorGlow: colorGlow,
+                          contenido: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.gps_fixed, color: colorGlow, size: 20),
+                              const SizedBox(width: 10),
+                              Text(
+                                '${mejorCarta['posicion'] ?? 'Posición'}'.toUpperCase(),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                  letterSpacing: 1.2,
+                                  shadows: [Shadow(color: colorGlow, blurRadius: 12)],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // La carta se revela en vivo: región, equipo y posición se
+                // encienden sobre ella al mismo tiempo que su insignia
+                // flota arriba; el resto entra al final con flash + pop.
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (opacidadFlash > 0)
+                      Opacity(
+                        opacity: opacidadFlash,
+                        child: Container(
+                          width: 300,
+                          height: 300,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: [colorGlow, colorGlow.withOpacity(0.0)],
+                            ),
+                          ),
+                        ),
+                      ),
+                    Transform.scale(
+                      scale: 0.92 + (0.08 * opacidadResto),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          boxShadow: opacidadResto > 0.3 && intensidadGlow > 0
+                              ? [
+                                  BoxShadow(
+                                    color: colorGlow.withOpacity(
+                                        0.8 * opacidadResto * intensidadGlow.clamp(0.0, 1.0)),
+                                    blurRadius: 80 * opacidadResto * intensidadGlow,
+                                    spreadRadius: 20 * opacidadResto * intensidadGlow,
+                                  )
+                                ]
+                              : null,
+                        ),
+                        child: CartaWidget(
+                          jugador: mejorCarta,
+                          width: 280,
+                          opacidadRegion: opacidadRegion,
+                          opacidadEquipo: opacidadEquipo,
+                          opacidadPosicion: opacidadPosicion,
+                          opacidadResto: opacidadResto,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 30),
+                Opacity(
+                  opacity: opacidadTexto,
+                  child: const Text(
+                    'Toca la pantalla para continuar',
+                    style: TextStyle(color: Colors.white54, fontSize: 16, letterSpacing: 1.2),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -1459,6 +1836,22 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       ],
     );
   }
+}
+
+/// Recorta la mitad izquierda o derecha del sobre para la animación de
+/// apertura "partida" (usada en la rareza épica).
+class _MitadSobreClipper extends CustomClipper<Rect> {
+  final bool izquierda;
+  _MitadSobreClipper({required this.izquierda});
+
+  @override
+  Rect getClip(Size size) => izquierda
+      ? Rect.fromLTWH(0, 0, size.width / 2, size.height)
+      : Rect.fromLTWH(size.width / 2, 0, size.width / 2, size.height);
+
+  @override
+  bool shouldReclip(covariant _MitadSobreClipper oldClipper) =>
+      oldClipper.izquierda != izquierda;
 }
 
 class _MascaraLogoPainter extends CustomPainter {
