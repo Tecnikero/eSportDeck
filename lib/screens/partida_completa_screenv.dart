@@ -179,7 +179,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
   Map<String, dynamic>? _rondaEnVivo;
   bool _enProrroga = false;
 
-  // Estado pendiente entre rondas para la decisión económica.
   final Map<int, bool> _resultadoForzado = {};
   bool _penalizacionRonda3 = false;
 

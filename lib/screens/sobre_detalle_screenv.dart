@@ -70,8 +70,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   late final Animation<double> _escalaDestello;
   late final Animation<double> _opacidadDestello;
 
-  /// Controla la revelación por etapas de la mejor carta obtenida:
-  /// región -> equipo -> posición -> carta completa.
   late final AnimationController _revelado;
 
   bool _comprando = false;
@@ -84,11 +82,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
 
   ui.Image? _logoImagenCruda;
 
-  // ---------- SISTEMA DE PITY (protección contra mala suerte) ----------
-  // Tras abrir este número de sobres sin obtener una carta épica, el
-  // próximo sobre la garantiza. La legendaria NO tiene pity: es 100%
-  // suerte, según su probabilidad definida en los tramos.
-  static const int _pityVioletaMax = 8;
+  static const int _pityVioletaMax = 30;
 
   int _pityVioleta = 0;
 
@@ -221,10 +215,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     return pool[_random.nextInt(pool.length)];
   }
 
-  /// Actualiza el contador de pity de la épica según lo obtenido en esta
-  /// apertura y, si se alcanzó el tope sin sacar épica (o mejor), reemplaza
-  /// la última carta revelada por una épica garantizada. La legendaria no
-  /// participa de esto: sale (o no) 100% al azar según su probabilidad.
   void _aplicarPity(List<Map<String, dynamic>> elegidas, List<Map<String, dynamic>> poolRestante) {
     final huboVioletaOMejor = elegidas.any((j) {
       final e = _efectoDeCarta(j);
@@ -245,9 +235,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   bool get _sobreGarantizado => widget.sobre['garantia'] == true;
   static const Set<_EfectoRareza> _tramosGarantia = {_EfectoRareza.violeta, _EfectoRareza.dorado};
 
-  /// Dibuja las cartas de UN sobre (respetando su cantidad de cartas) y,
-  /// si el sobre tiene 'garantia': true, se asegura de que al menos una
-  /// carta sea Épica o superior antes de devolver el resultado.
   List<Map<String, dynamic>> _abrirUnaCopia(List<Map<String, dynamic>> poolCompleto, int cantidadCartas) {
     var poolDisponible = List<Map<String, dynamic>>.from(poolCompleto);
     final cartas = <Map<String, dynamic>>[];
@@ -391,10 +378,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       await _efecto.forward(from: 0);
       if (!mounted) return;
 
-      // El efecto de rareza se mantiene activo durante el rasgado para que
-      // el propio sobre se abra de forma distinta según lo que trae dentro
-      // (partido en dos para épicas, estallando en fragmentos para
-      // legendarias, el rasgado clásico para el resto).
       await _rasgado.forward(from: 0);
       if (!mounted) return;
       setState(() => _efectoActivo = _EfectoRareza.ninguno);
@@ -418,7 +401,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   }
 
   static const int _copiasBulk = 5;
-  static const double _descuentoBulk = 0.9; // 10% de descuento por comprar x5
+  static const double _descuentoBulk = 0.9;
 
   int get precioBulk => ((widget.sobre['precio'] as int) * _copiasBulk * _descuentoBulk).round();
 
@@ -521,9 +504,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   Widget build(BuildContext context) {
     final sobre = widget.sobre;
     final color = sobre['color'] as Color;
-    // Estas capas (sólido -> efecto -> foto VCT) se mantienen visibles
-    // desde que se compra el sobre y durante toda la revelación de
-    // cartas, para no perder la coherencia visual del fondo.
     final mostrandoFondoDeApertura = _comprado;
 
     return Scaffold(
@@ -538,9 +518,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
           onPressed: () => Navigator.pop(context, _cartasReveladas.isNotEmpty),
         ),
       ),
-      // Todas las capas de fondo cubren la pantalla COMPLETA (incluida el
-      // área bajo el status bar y sobre la barra de gestos), así no queda
-      // ninguna costura de color arriba/abajo mientras corre la animación.
       body: Stack(
         children: [
           Positioned.fill(child: _buildFondoLogoVCT()),
@@ -607,8 +584,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     }
   }
 
-  /// Duración de la secuencia región -> equipo -> posición -> resto.
-  /// Incluso una carta común recorre las 4 etapas; nunca aparece de golpe.
   Duration _duracionRevelado(_EfectoRareza efecto) {
     switch (efecto) {
       case _EfectoRareza.dorado:
@@ -618,13 +593,10 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       case _EfectoRareza.plata:
         return const Duration(milliseconds: 2800);
       case _EfectoRareza.ninguno:
-        // Carta común: sin suspenso, aparece prácticamente de una.
         return const Duration(milliseconds: 500);
     }
   }
 
-  /// Ruta del logo de la región para el banner de impacto que aparece
-  /// arriba de la carta cuando el efecto es especial (plata/violeta/dorado).
   String _rutaRegion(Map<String, dynamic> jugador) {
     final region = '${jugador['region'] ?? 'default'}'.toLowerCase();
     return 'assets/valorant/regiones/$region.png';
@@ -798,11 +770,10 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       animation: Listenable.merge([_pulso, _fondoController]),
       builder: (context, child) {
         final colorSobre = widget.sobre['color'] as Color;
-        final respiracion = _escalaPulso.value; // 1.0 -> 1.05
+        final respiracion = _escalaPulso.value;
         return Stack(
           alignment: Alignment.center,
           children: [
-            // Glow ambiental que "respira" al mismo ritmo que el sobre.
             Transform.scale(
               scale: respiracion,
               child: Container(
@@ -820,7 +791,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                 ),
               ),
             ),
-            // Partículas orbitando suavemente alrededor del sobre.
             ...List.generate(6, (i) {
               final anguloBase = (i / 6) * 2 * pi;
               final angulo = anguloBase + _fondoController.value * 2 * pi;
@@ -1099,9 +1069,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     );
   }
 
-  /// Muestra cuánto le falta al jugador para que el sistema le garantice
-  /// una carta épica. La legendaria queda fuera de este panel a propósito:
-  /// no tiene pity, sale 100% al azar según su probabilidad.
   Widget _buildPanelPity(Color color) {
     final faltanViolestas = (_pityVioletaMax - _pityVioleta).clamp(0, _pityVioletaMax);
 
@@ -1153,8 +1120,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     );
   }
 
-  /// Panel colapsable con las probabilidades reales de cada rareza,
-  /// para dar transparencia (y generar expectativa) antes de abrir.
   Widget _buildPanelProbabilidades(Color color) {
     final pesoTotal = _tramos.fold<int>(0, (s, t) => s + (t['peso'] as int));
 
@@ -1215,9 +1180,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     );
   }
 
-  /// Elige cómo se abre el sobre según la rareza de lo que hay dentro.
-  /// Común/rara usan el rasgado clásico; épica se parte en dos mitades;
-  /// legendaria estalla en fragmentos dorados.
   Widget _visualAperturaSobre(Map<String, dynamic> sobre, Color color) {
     switch (_efectoActivo) {
       case _EfectoRareza.dorado:
@@ -1237,7 +1199,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     }
   }
 
-  /// Apertura clásica: el sobre tiembla, crece y se desvanece encogiéndose.
   Widget _aperturaComun(Map<String, dynamic> sobre, Color color) {
     return Opacity(
       opacity: _opacidadSobre.value,
@@ -1251,8 +1212,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     );
   }
 
-  /// El sobre se parte en dos mitades que se separan girando, dejando
-  /// asomar el destello de la carta épica que trae dentro.
   Widget _aperturaPartida(Map<String, dynamic> sobre, Color color) {
     final t = Curves.easeInCubic.transform(_rasgado.value.clamp(0.0, 1.0));
     final desplazar = t * 210;
@@ -1293,9 +1252,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     );
   }
 
-  /// El sobre estalla en fragmentos que salen disparados desde el centro.
-  /// Se usa tanto para rara (pocos fragmentos, poca fuerza) como para
-  /// legendaria (más fragmentos, más fuerza y color dorado).
   Widget _aperturaExplosiva(
     Map<String, dynamic> sobre,
     Color color,
@@ -1434,16 +1390,12 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     );
   }
 
-  /// Ruta del logo del equipo para el banner de la etapa "equipo".
   String _rutaEquipo(Map<String, dynamic> jugador) {
     final region = '${jugador['region'] ?? 'default'}'.toLowerCase();
     final equipo = '${jugador['equipo'] ?? 'default'}'.toLowerCase();
     return 'assets/valorant/equipos/$region/$equipo.png';
   }
 
-  /// Opacidad + escala de una etapa tipo "insignia" dentro de una ventana
-  /// [inicio, inicio+duracion] del progreso total [t]: entra con un pop,
-  /// se mantiene, y se apaga antes de ceder paso a la siguiente etapa.
   List<double> _pulsoEtapa(double t, double inicio, double duracion) {
     final local = ((t - inicio) / duracion).clamp(0.0, 1.0);
     final entrada = (local / 0.35).clamp(0.0, 1.0);
@@ -1483,13 +1435,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     );
   }
 
-  /// Revelación de la mejor carta combinando ambos estilos: arriba flota
-  /// una insignia con lo que se está revelando (región -> equipo ->
-  /// posición), y AL MISMO TIEMPO esa misma capa se enciende sobre la
-  /// propia carta, que se va revelando en vivo. Al final, cuando ya se
-  /// vieron las tres etapas, el resto (foto, OVR, nombre, stats) aparece
-  /// con un flash y un pop, como en la apertura de sobres de FIFA/EA FC.
-  /// Las cartas comunes no tienen suspenso: aparecen directo.
   Widget _buildRevelacionInicial() {
     final mejorCarta = _cartasReveladas.first;
     final efecto = _efectoDeCarta(mejorCarta);
@@ -1507,8 +1452,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       _EfectoRareza.ninguno => 0.0,
     };
 
-    // Ventanas de tiempo (sobre t de 0 a 1) para cada etapa, cuando el
-    // efecto no es común.
     const double inicioRegion = 0.00;
     const double inicioEquipo = 0.24;
     const double inicioPosicion = 0.48;
@@ -1532,7 +1475,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
             final t = _revelado.value;
 
             if (esComun) {
-              // Cartas comunes: sin suspenso, sale de una sola vez.
               final opacidadResto = Curves.easeOut.transform((t / 0.6).clamp(0.0, 1.0));
               final opacidadTexto = ((t - 0.7) / 0.3).clamp(0.0, 1.0);
               return Column(
@@ -1561,9 +1503,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
               );
             }
 
-            // ---- Efectos especiales ----
-            // La misma curva alimenta tanto el banner flotante de la etapa
-            // como la capa correspondiente encendiéndose sobre la carta.
             final opacidadRegion = Curves.easeOut.transform(((t - inicioRegion) / duracionEtapa).clamp(0.0, 1.0));
             final opacidadEquipo = Curves.easeOut.transform(((t - inicioEquipo) / duracionEtapa).clamp(0.0, 1.0));
             final opacidadPosicion = Curves.easeOut.transform(((t - inicioPosicion) / duracionEtapa).clamp(0.0, 1.0));
@@ -1572,7 +1511,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
             final bannerEquipo = _pulsoEtapa(t, inicioEquipo, duracionEtapa);
             final bannerPosicion = _pulsoEtapa(t, inicioPosicion, duracionEtapa);
 
-            // ---- Etapa final: el resto de la carta aparece con flash ----
             final localFinal = ((t - inicioResto) / (1.0 - inicioResto)).clamp(0.0, 1.0);
             final opacidadResto = Curves.easeOut.transform((localFinal / 0.4).clamp(0.0, 1.0));
             final opacidadFlash = opacidadResto < 1.0
@@ -1584,7 +1522,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Insignia flotante: región -> equipo -> posición, una a la vez.
                 SizedBox(
                   height: 56,
                   child: Stack(
@@ -1682,9 +1619,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                 ),
                 const SizedBox(height: 14),
 
-                // La carta se revela en vivo: región, equipo y posición se
-                // encienden sobre ella al mismo tiempo que su insignia
-                // flota arriba; el resto entra al final con flash + pop.
                 Stack(
                   alignment: Alignment.center,
                   children: [
@@ -1838,8 +1772,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   }
 }
 
-/// Recorta la mitad izquierda o derecha del sobre para la animación de
-/// apertura "partida" (usada en la rareza épica).
 class _MitadSobreClipper extends CustomClipper<Rect> {
   final bool izquierda;
   _MitadSobreClipper({required this.izquierda});

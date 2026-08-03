@@ -22,12 +22,36 @@ const List<Map<String, dynamic>> tiposSobre = [
     'icono': Icons.style_outlined,
     'imagen': 'assets/valorant/sobres/sobres-beta.png',
     'color': Color(0xFF4A90D9),
-    'rarezas': ['Normal', 'champions', 'finals_champions'],
+    'rarezas': ['Normal'],
     'tramos': _tramosBasico,
     'garantia': false,
     'descripcion': '2 cartas aleatorias del catálogo.\nComún 70% · Rara 24% · Épica 5% · Legendaria 1%.',
   },
 ];
+
+const List<Map<String, dynamic>> _tramosPremium = [
+  {'min': 0, 'max': 84, 'peso': 40, 'efecto': 'ninguno'},
+  {'min': 85, 'max': 88, 'peso': 35, 'efecto': 'plata'},
+  {'min': 89, 'max': 91, 'peso': 18, 'efecto': 'violeta'},
+  {'min': 92, 'max': 99, 'peso': 7, 'efecto': 'dorado'},
+];
+
+const Map<String, Map<String, dynamic>> sobresGanables = {
+  'premium_torneo': {
+    'id': 'premium_torneo',
+    'nombre': 'Sobre Premium',
+    'precio': 0,
+    'cantidad_cartas': 3,
+    'icono': Icons.emoji_events,
+    'imagen': 'assets/valorant/sobres/sobre-premium.png',
+    'color': Color(0xFFFFD700),
+    'rarezas': ['Normal', 'champions', 'finals_champions'],
+    'tramos': _tramosPremium,
+    'garantia': true,
+    'descripcion':
+        '3 cartas con mucha mejor probabilidad de rareza alta.\nSe gana siendo campeón del Torneo.',
+  },
+};
 
 class TiendaScreen extends StatefulWidget {
   const TiendaScreen({super.key});
@@ -83,6 +107,7 @@ class _TiendaScreenState extends State<TiendaScreen> {
         child: Column(
           children: [
             _bannerRacha(),
+            _seccionSobresPendientes(),
             const SizedBox(height: 14),
             Expanded(
               child: GridView.builder(
@@ -142,6 +167,80 @@ class _TiendaScreenState extends State<TiendaScreen> {
     );
   }
 
+  Widget _seccionSobresPendientes() {
+    return Consumer<PerfilProvider>(
+      builder: (context, perfil, _) {
+        final pendientes = perfil.sobresPendientes;
+        if (pendientes.isEmpty) return const SizedBox.shrink();
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.inventory_2, color: Color(0xFFFFD700), size: 16),
+                  const SizedBox(width: 6),
+                  const Text('MIS SOBRES',
+                      style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ...pendientes.entries.map((entrada) {
+                final definicion = sobresGanables[entrada.key];
+                if (definicion == null) return const SizedBox.shrink();
+                final cantidad = entrada.value;
+                final color = definicion['color'] as Color;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: color.withOpacity(0.6)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(definicion['icono'] as IconData, color: color, size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text('${definicion['nombre']}  x$cantidad',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13.5)),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: color,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () => _abrirSobrePendiente(definicion),
+                        child: const Text('ABRIR',
+                            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _abrirSobrePendiente(Map<String, dynamic> definicion) async {
+    final resultado = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (context) => SobreDetalleScreen(sobre: definicion)),
+    );
+    if (resultado == true && context.mounted) {
+      final perfil = context.read<PerfilProvider>();
+      await perfil.consumirSobrePendiente(definicion['id'] as String);
+      await perfil.cargar();
+    }
+  }
+
   Widget _tarjetaSobre(Map<String, dynamic> sobre) {
     final color = sobre['color'] as Color;
     return GestureDetector(
@@ -199,10 +298,8 @@ class _TiendaScreenState extends State<TiendaScreen> {
     );
   }
 
-  // La legendaria ya no tiene pity (es 100% suerte), así que este
-  // indicador ahora muestra el progreso hacia la épica garantizada.
   Widget _indicadorPity(String sobreId) {
-    const epicaMax = 8;
+    const epicaMax = 30;
     return Consumer<PerfilProvider>(
       builder: (context, perfil, _) {
         final pityEpica = perfil.obtenerPity(sobreId, 'violeta');

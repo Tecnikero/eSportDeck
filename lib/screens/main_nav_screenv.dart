@@ -21,8 +21,6 @@ class _MainNavScreenState extends State<MainNavScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Primero se revisa la actualización: si es obligatoria, el diálogo
-      // bloquea la pantalla y no se sigue con el resto del flujo.
       await mostrarActualizacionSiCorresponde(context);
       if (!mounted) return;
 

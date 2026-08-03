@@ -5,8 +5,6 @@ import '../widgets/carta_widget.dart';
 import '../widgets/sesion_dialog.dart';
 import '../providers/perfil_provider.dart';
 
-// ---------- ORDEN POR OVR ----------
-// Se alterna presionando el circulito "OVR": sin orden -> descendente -> ascendente -> sin orden.
 enum _OrdenOvr { ninguno, descendente, ascendente }
 
 const Color _kFondo = Color(0xFF050914);
@@ -25,17 +23,13 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
   Map<String, dynamic>? _cartaSeleccionada;
   late Future<List<Map<String, dynamic>>> _futureJugadores;
 
-  // ---------- FILTROS ----------
-  String? _regionFiltro; // null = todas las regiones
-  String? _equipoFiltro; // null = todos los equipos
+  String? _regionFiltro;
+  String? _equipoFiltro;
   _OrdenOvr _ordenOvr = _OrdenOvr.ninguno;
 
-  // Controla si el panel de circulitos de cada filtro está desplegado.
   bool _regionExpandida = false;
   bool _equipoExpandido = false;
 
-  // Cada equipo vive dentro de una carpeta de región (assets/valorant/equipos/<region>/<equipo>.png),
-  // así que necesitamos saber a qué región pertenece cada equipo para armar la ruta del ícono.
   Map<String, String> _equipoPorRegion = {};
 
   @override
@@ -121,11 +115,6 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
     }
   }
 
-  // ---------- VENTA MASIVA DE REPETIDAS ----------
-  // "Repetida" = toda copia por encima de la primera de cada carta (siempre
-  // se conserva 1 unidad de cada una). Se vende todo de una sola vez al
-  // precio normal según rareza.
-
   List<Map<String, dynamic>> _repetidasDe(List<Map<String, dynamic>> jugadores) =>
       jugadores.where((c) => (c['_cantidad'] as int? ?? 1) > 1).toList();
 
@@ -206,7 +195,6 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
     if (userId == null) return;
 
     try {
-      // Deja 1 unidad de cada carta repetida (nunca elimina la fila).
       for (final carta in repetidas) {
         await supabase
             .from('inventario')
@@ -242,9 +230,6 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
     }
   }
 
-  // ---------- PRECIOS DE VENTA RÁPIDA (por rareza) ----------
-  // Las bandas de OVR coinciden con las probabilidades de los sobres:
-  // Común 0-80 · Rara 81-88 · Épica 89-91 · Legendaria 92-99.
   static const Map<String, int> _precioVentaPorRareza = {
     'comun': 100,
     'rara': 250,
@@ -271,16 +256,11 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
     });
   }
 
-  // ---------- HELPERS DE FILTROS ----------
-
   String _regionDe(Map<String, dynamic> j) => '${j['region'] ?? ''}'.trim();
   String _equipoDe(Map<String, dynamic> j) => '${j['equipo'] ?? ''}'.trim();
 
-  // Ícono de región (VCT), ej: "amer" -> assets/valorant/regiones/amer.png
   String _rutaRegion(String region) => 'assets/valorant/regiones/${region.toLowerCase()}.png';
 
-  // Estandarte del equipo eSports: vive dentro de la carpeta de su región,
-  // ej: equipo "sen" de la región "amer" -> assets/valorant/equipos/amer/sen.png
   String _rutaEquipo(String equipo) {
     final region = _equipoPorRegion[equipo];
     if (region == null || region.isEmpty) {
@@ -317,8 +297,6 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
     setState(() {
       _regionFiltro = (_regionFiltro == region) ? null : region;
       _regionExpandida = false;
-      // Si el equipo elegido no pertenece a la nueva región, lo limpiamos
-      // para no dejar un filtro imposible de cumplir.
       if (_regionFiltro != null &&
           _equipoFiltro != null &&
           _equipoPorRegion[_equipoFiltro] != _regionFiltro) {
@@ -386,9 +364,6 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
 
               final jugadores = snapshot.data ?? [];
 
-              // Las opciones de filtro salen de TODA la colección, no de la
-              // lista ya filtrada, para que los circulitos no desaparezcan
-              // al elegir un filtro.
               final regiones = jugadores
                   .map(_regionDe)
                   .where((r) => r.isNotEmpty)
@@ -402,16 +377,11 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                   .toList()
                 ..sort();
 
-              // A qué región pertenece cada equipo (para armar la ruta del
-              // ícono y para poder mostrar solo los equipos de la región
-              // elegida dentro del panel).
               _equipoPorRegion = {
                 for (final j in jugadores)
                   if (_equipoDe(j).isNotEmpty) _equipoDe(j): _regionDe(j),
               };
 
-              // Si hay una región elegida, el panel de equipos solo muestra
-              // los equipos de esa región.
               final equiposDisponibles = _regionFiltro == null
                   ? equipos
                   : equipos.where((e) => _equipoPorRegion[e] == _regionFiltro).toList();
@@ -623,12 +593,6 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
     );
   }
 
-  // ---------- UI: BOTÓN PRINCIPAL (Región / Equipo) ----------
-
-  /// El circulito único que se ve siempre: muestra el ícono de lo elegido
-  /// (o uno genérico si no hay filtro) y una flechita que indica si el
-  /// panel de opciones está desplegado o no. Al tocarlo, se abre/cierra
-  /// el panel con los circulitos de verdad.
   Widget _buildBotonPrincipal({
     required Widget contenido,
     required bool activo,
@@ -805,10 +769,6 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
     );
   }
 
-  // ---------- UI: BANNER "VENDER REPETIDAS" ----------
-  // Solo aparece si hay al menos una carta con más de 1 copia. Usa la
-  // colección completa (sin filtros) para que el banner y el total
-  // vendido sean consistentes sin importar qué filtro esté activo.
   Widget _buildBannerVenderRepetidas(List<Map<String, dynamic>> jugadores) {
     final repetidas = _repetidasDe(jugadores);
     if (repetidas.isEmpty) return const SizedBox.shrink();

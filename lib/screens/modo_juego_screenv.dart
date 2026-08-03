@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'partida_rapida_screenv.dart';
 import 'partida_completa_screenv.dart';
+import 'modo_torneo_screenv.dart';
 
-// ---------- TEMA ARENA (rojo / negro), igual que Partida Rápida ----------
 const Color _kFondo = Color(0xFF0A0A0A);
 const Color _kFondoPanel = Color(0xFF1A0E0E);
 const Color _kRojo = Color(0xFFE30425);
@@ -54,7 +54,11 @@ class ModoJuegoScreen extends StatelessWidget {
                 titulo: 'TORNEO',
                 subtitulo: 'Doble eliminación · Upper & Lower Bracket · Al mejor de 5 rondas',
                 icono: Icons.emoji_events,
-                activo: false,
+                activo: true,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TorneoDraftScreen()),
+                ),
               ),
               const SizedBox(height: 16),
 

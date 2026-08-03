@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Recompensas de dinero por día de racha (día 7 = jackpot, luego reinicia el ciclo).
 const List<int> _recompensasPorDiaDeRacha = [50, 60, 75, 90, 110, 140, 250];
 
 class PerfilProvider extends ChangeNotifier {
@@ -11,14 +10,13 @@ class PerfilProvider extends ChangeNotifier {
   bool _cargando = false;
   String? _error;
 
-  // ---------- RACHA / RECOMPENSA DIARIA ----------
   int _rachaDias = 0;
   DateTime? _ultimaRecompensa;
   bool _recompensaDiariaDisponible = false;
 
-  // ---------- PITY (protección contra mala suerte en sobres) ----------
-  // sobreId -> {'violeta': contador, 'dorado': contador}
   Map<String, Map<String, int>> _pity = {};
+
+  Map<String, int> _sobresPendientes = {};
 
   int? get dinero => _dinero;
   bool get cargando => _cargando;
@@ -26,9 +24,13 @@ class PerfilProvider extends ChangeNotifier {
   int get rachaDias => _rachaDias;
   bool get recompensaDiariaDisponible => _recompensaDiariaDisponible;
   int get proximaRecompensa {
-    final diaObjetivo = (_rachaDias % 7); // si hoy reclamo, seguiría este día (0-indexed -> día siguiente)
+    final diaObjetivo = (_rachaDias % 7);
     return _recompensasPorDiaDeRacha[diaObjetivo];
   }
+
+  Map<String, int> get sobresPendientes => Map.unmodifiable(_sobresPendientes);
+  int get totalSobresPendientes => _sobresPendientes.values.fold(0, (s, c) => s + c);
+  int cantidadSobrePendiente(String sobreId) => _sobresPendientes[sobreId] ?? 0;
 
   Future<void> cargar() async {
     final userId = _supabase.auth.currentUser?.id;
@@ -54,6 +56,8 @@ class PerfilProvider extends ChangeNotifier {
       _pity = _parsearPity(fila['pity']);
 
       _recompensaDiariaDisponible = _calcularSiHayRecompensaDisponible();
+
+      await _cargarSobresPendientes(userId);
     } catch (e) {
       debugPrint('Error al cargar el perfil: $e');
       _error = 'No se pudo cargar tu saldo.';
@@ -85,7 +89,6 @@ class PerfilProvider extends ChangeNotifier {
     return !_mismoDia(_ultimaRecompensa!, DateTime.now());
   }
 
-  /// Reclama la recompensa diaria. Devuelve el monto ganado, o null si ya se reclamó hoy.
   Future<int?> reclamarRecompensaDiaria() async {
   final userId = _supabase.auth.currentUser?.id;
   if (userId == null || !_recompensaDiariaDisponible) return null;
@@ -106,8 +109,6 @@ class PerfilProvider extends ChangeNotifier {
   }
 }
 
-  // ---------- PITY ----------
-
   int obtenerPity(String sobreId, String tier) => _pity[sobreId]?[tier] ?? 0;
 
   Future<void> actualizarPity(String sobreId, Map<String, int> nuevoPity) async {
@@ -124,6 +125,147 @@ class PerfilProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _cargarSobresPendientes(String userId) async {
+    try {
+      final filas = await _supabase
+          .from('sobres_pendientes')
+          .select('sobre_id, cantidad')
+          .eq('user_id', userId);
+
+      final mapa = <String, int>{};
+      for (final fila in (filas as List)) {
+        final id = '${fila['sobre_id']}';
+        final cantidad = (fila['cantidad'] ?? 0) as int;
+        if (cantidad > 0) mapa[id] = cantidad;
+      }
+      _sobresPendientes = mapa;
+    } catch (e) {
+      debugPrint('Error al cargar sobres pendientes: $e');
+    }
+  }
+
+  Future<String?> agregarSobrePendienteConError(String sobreId, {int cantidad = 1}) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return 'No hay sesión activa (userId es null).';
+
+    final actual = _sobresPendientes[sobreId] ?? 0;
+    final nuevaCantidad = actual + cantidad;
+    _sobresPendientes[sobreId] = nuevaCantidad;
+    notifyListeners();
+
+    try {
+      final filas = await _supabase
+          .from('sobres_pendientes')
+          .select('id, cantidad')
+          .eq('user_id', userId)
+          .eq('sobre_id', sobreId);
+
+      final lista = filas as List;
+      if (lista.isNotEmpty) {
+        final registro = lista.first;
+        await _supabase
+            .from('sobres_pendientes')
+            .update({'cantidad': ((registro['cantidad'] ?? 0) as int) + cantidad})
+            .eq('id', registro['id']);
+      } else {
+        await _supabase.from('sobres_pendientes').insert({
+          'user_id': userId,
+          'sobre_id': sobreId,
+          'cantidad': cantidad,
+        });
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error al guardar sobre pendiente: $e');
+      final actualTrasFallo = (_sobresPendientes[sobreId] ?? cantidad) - cantidad;
+      if (actualTrasFallo <= 0) {
+        _sobresPendientes.remove(sobreId);
+      } else {
+        _sobresPendientes[sobreId] = actualTrasFallo;
+      }
+      notifyListeners();
+      return e.toString();
+    }
+  }
+
+  Future<bool> agregarSobrePendiente(String sobreId, {int cantidad = 1}) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return false;
+
+    final actual = _sobresPendientes[sobreId] ?? 0;
+    final nuevaCantidad = actual + cantidad;
+    _sobresPendientes[sobreId] = nuevaCantidad;
+    notifyListeners();
+
+    try {
+      final filas = await _supabase
+          .from('sobres_pendientes')
+          .select('id, cantidad')
+          .eq('user_id', userId)
+          .eq('sobre_id', sobreId);
+
+      final lista = filas as List;
+      if (lista.isNotEmpty) {
+        final registro = lista.first;
+        await _supabase
+            .from('sobres_pendientes')
+            .update({'cantidad': ((registro['cantidad'] ?? 0) as int) + cantidad})
+            .eq('id', registro['id']);
+      } else {
+        await _supabase.from('sobres_pendientes').insert({
+          'user_id': userId,
+          'sobre_id': sobreId,
+          'cantidad': cantidad,
+        });
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error al guardar sobre pendiente: $e');
+      final actualTrasFallo = (_sobresPendientes[sobreId] ?? cantidad) - cantidad;
+      if (actualTrasFallo <= 0) {
+        _sobresPendientes.remove(sobreId);
+      } else {
+        _sobresPendientes[sobreId] = actualTrasFallo;
+      }
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> consumirSobrePendiente(String sobreId) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    final actual = _sobresPendientes[sobreId] ?? 0;
+    if (actual <= 0) return;
+    final nuevaCantidad = actual - 1;
+
+    if (nuevaCantidad <= 0) {
+      _sobresPendientes.remove(sobreId);
+    } else {
+      _sobresPendientes[sobreId] = nuevaCantidad;
+    }
+    notifyListeners();
+
+    try {
+      if (nuevaCantidad <= 0) {
+        await _supabase
+            .from('sobres_pendientes')
+            .delete()
+            .eq('user_id', userId)
+            .eq('sobre_id', sobreId);
+      } else {
+        await _supabase
+            .from('sobres_pendientes')
+            .update({'cantidad': nuevaCantidad})
+            .eq('user_id', userId)
+            .eq('sobre_id', sobreId);
+      }
+    } catch (e) {
+      debugPrint('Error al consumir sobre pendiente: $e');
+    }
+  }
+
   void actualizarDinero(int nuevoValor) {
     _dinero = nuevoValor;
     notifyListeners();
@@ -135,6 +277,7 @@ class PerfilProvider extends ChangeNotifier {
     _ultimaRecompensa = null;
     _recompensaDiariaDisponible = false;
     _pity = {};
+    _sobresPendientes = {};
     _error = null;
     notifyListeners();
   }

@@ -14,8 +14,6 @@ const Color _kDorado = Color(0xFFFFD700);
 const Color _kTextoSuave = Color(0xFFB9B4B4);
 const Color _kBorde = Color(0x33FFFFFF);
 
-/// Contenedor base reutilizado por todas las tarjetas de esta pantalla,
-/// para que la interfaz se vea consistente y simple.
 class _Tarjeta extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -42,7 +40,6 @@ class _Tarjeta extends StatelessWidget {
   }
 }
 
-/// Encabezado simple y reutilizable: ícono + título + subtítulo opcional.
 class _Encabezado extends StatelessWidget {
   final IconData icono;
   final String titulo;
@@ -89,7 +86,6 @@ class _Encabezado extends StatelessWidget {
   }
 }
 
-/// Botón principal reutilizado por las tres pantallas de esta vista.
 class _BotonPrincipal extends StatelessWidget {
   final String texto;
   final VoidCallback? onPressed;
@@ -306,8 +302,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     });
   }
 
-  // ---------- QUÍMICA ----------
-
   String _rol(Map<String, dynamic> j) => '${j['posicion'] ?? ''}'.trim().toUpperCase();
   String _region(Map<String, dynamic> j) => '${j['region'] ?? ''}'.trim().toLowerCase();
   String _equipo(Map<String, dynamic> j) => '${j['equipo'] ?? ''}'.trim().toLowerCase();
@@ -423,10 +417,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     try {
       _rosterRival = await _generarRivalIA();
 
-      // La IA ahora "compensa" parte de la ventaja de química/sinergia del
-      // jugador (simula que el rival también tiene coordinación de equipo),
-      // y el azar por ronda tiene más peso. Esto baja el % de victoria del
-      // jugador sin tocar el draft, la química ni la asignación de agentes.
       final quimicaJugador = _ratingEfectivo(_seleccionados, conQuimica: true) -
           _ratingEfectivo(_seleccionados, conQuimica: false);
       final ratingPropio = _ratingEfectivo(_seleccionados, conQuimica: true) + _bonoSinergia;
@@ -1018,7 +1008,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     );
   }
 
-  /// Los "3 puntitos" de química de una carta: dorado = ganado, vacío = no ganado.
   Widget _puntitosQuimica(int valor) {
     return Row(
       mainAxisSize: MainAxisSize.min,
