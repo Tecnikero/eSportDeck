@@ -111,7 +111,7 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
   late final Map<String, String> _mapaActual =
       _mapasValorant[_random.nextInt(_mapasValorant.length)];
   final List<String?> _agentesAsignados = List<String?>.filled(5, null);
-  int _bonoSinergia = 0;
+  double _bonoSinergia = 0;
 
   int _rondasUsuario = 0;
   int _rondasRival = 0;
@@ -124,27 +124,33 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
   String _rol(Map<String, dynamic> j) => '${j['posicion'] ?? ''}'.trim().toUpperCase();
   String _region(Map<String, dynamic> j) => '${j['region'] ?? ''}'.trim().toLowerCase();
   String _equipo(Map<String, dynamic> j) => '${j['equipo'] ?? ''}'.trim().toLowerCase();
+  String _pais(Map<String, dynamic> j) => '${j['pais'] ?? ''}'.trim().toLowerCase();
+
+  static const double _quimicaPuntosPorObjetivo = 0.5;
 
   int _quimicaDeCarta(Map<String, dynamic> carta, List<Map<String, dynamic>> roster) {
-    var puntos = 0;
+    var objetivos = 0;
     final rolesPresentes = roster.map(_rol).toSet();
-    if (roster.length >= 4 && _rolesPrincipales.every(rolesPresentes.contains)) puntos += 1;
+    if (roster.length >= 4 && _rolesPrincipales.every(rolesPresentes.contains)) objetivos += 1;
 
     final region = _region(carta);
-    if (region.isNotEmpty && roster.where((j) => _region(j) == region).length > 1) puntos += 1;
+    if (region.isNotEmpty && roster.where((j) => _region(j) == region).length > 1) objetivos += 1;
 
     final equipo = _equipo(carta);
-    if (equipo.isNotEmpty && roster.where((j) => _equipo(j) == equipo).length > 1) puntos += 1;
+    if (equipo.isNotEmpty && roster.where((j) => _equipo(j) == equipo).length > 1) objetivos += 1;
 
-    return puntos;
+    final pais = _pais(carta);
+    if (pais.isNotEmpty && roster.where((j) => _pais(j) == pais).length > 1) objetivos += 1;
+
+    return objetivos;
   }
 
   double _ratingEfectivo(List<Map<String, dynamic>> roster, {bool conQuimica = true}) {
     if (roster.isEmpty) return 0;
     final suma = roster.fold<double>(0, (s, j) {
       final ovr = (j['ovr'] ?? 0) as num;
-      final quimica = conQuimica ? _quimicaDeCarta(j, roster) : 0;
-      return s + ovr + quimica;
+      final objetivos = conQuimica ? _quimicaDeCarta(j, roster) : 0;
+      return s + ovr + (objetivos * _quimicaPuntosPorObjetivo);
     });
     return suma / roster.length;
   }
@@ -159,14 +165,17 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
     return 'assets/valorant/agentes/$archivo.png';
   }
 
-  int _bonificacionSinergia() {
+  double _bonificacionSinergia() {
     final buenos = _agentesFuertesPorMapa[_mapaActual['nombre']] ?? const <String>[];
-    var puntos = 0;
+    var puntos = 0.0;
     for (final agente in _agentesAsignados) {
-      if (agente != null && buenos.contains(agente)) puntos += 1;
+      if (agente != null && buenos.contains(agente)) puntos += 0.5;
     }
     return puntos;
   }
+
+  String _formatoBono(double valor) =>
+      valor == valor.roundToDouble() ? valor.toInt().toString() : valor.toStringAsFixed(1);
 
   bool get _todosAsignados => !_agentesAsignados.contains(null);
 
@@ -189,7 +198,9 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
       isScrollControlled: true,
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 30),
+          padding: EdgeInsets.fromLTRB(
+            16, 20, 16, 30 + MediaQuery.of(context).padding.bottom,
+          ),
           decoration: BoxDecoration(
             color: _kFondoPanel,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -320,12 +331,12 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
   }
 
   Future<void> _simular() async {
-    final quimicaJugador = _ratingEfectivo(widget.titularesUsuario, conQuimica: true) -
-        _ratingEfectivo(widget.titularesUsuario, conQuimica: false);
-    final ratingPropio = _ratingEfectivo(widget.titularesUsuario, conQuimica: true) + _bonoSinergia;
-    final ratingRival = _ratingEfectivo(widget.rosterRival, conQuimica: false) +
-        (quimicaJugador * 0.45) +
-        (_bonoSinergia * 0.35);
+    final miMediaBase =
+        _ratingEfectivo(widget.titularesUsuario, conQuimica: true) + _bonoSinergia;
+    final rivalMediaBase = _ratingEfectivo(widget.rosterRival, conQuimica: true);
+    final ruidoPartido = (_random.nextDouble() * 6) - 3;
+    final ratingPropio = miMediaBase + (ruidoPartido / 2);
+    final ratingRival = rivalMediaBase - (ruidoPartido / 2);
 
     while (_rondasUsuario < _rondasParaGanar && _rondasRival < _rondasParaGanar) {
       final numeroRonda = _rondaActual + 1;
@@ -340,8 +351,16 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
       final momentumUsuario = rachaUsuario >= 3 ? 1 : (rachaRival >= 3 ? -1 : 0);
       final momentumRival = rachaRival >= 3 ? 1 : (rachaUsuario >= 3 ? -1 : 0);
 
-      final miPuntaje = ratingPropio + momentumUsuario + (_random.nextInt(19) - 9);
-      final rivalPuntaje = ratingRival + momentumRival + (_random.nextInt(19) - 9);
+      var miPuntaje = ratingPropio + momentumUsuario + (_random.nextInt(13) - 6);
+      var rivalPuntaje = ratingRival + momentumRival + (_random.nextInt(13) - 6);
+      if (_random.nextInt(100) < 8) {
+        final golpe = 6 + _random.nextInt(7);
+        if (_random.nextBool()) {
+          miPuntaje += golpe;
+        } else {
+          rivalPuntaje += golpe;
+        }
+      }
 
       final ganeLaRonda =
           miPuntaje == rivalPuntaje ? _random.nextBool() : miPuntaje > rivalPuntaje;
@@ -654,7 +673,7 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
                 if (_bonoSinergia > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 6.0),
-                    child: Text('Ventaja táctica por sinergia: +$_bonoSinergia',
+                    child: Text('Ventaja táctica por sinergia: +${_formatoBono(_bonoSinergia)}',
                         style: const TextStyle(color: _kDorado, fontSize: 11.5, fontWeight: FontWeight.bold)),
                   ),
               ],

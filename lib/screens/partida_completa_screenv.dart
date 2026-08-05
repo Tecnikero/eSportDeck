@@ -257,25 +257,34 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
   String _rol(Map<String, dynamic> j) => '${j['posicion'] ?? ''}'.trim().toUpperCase();
   String _region(Map<String, dynamic> j) => '${j['region'] ?? ''}'.trim().toLowerCase();
   String _equipo(Map<String, dynamic> j) => '${j['equipo'] ?? ''}'.trim().toLowerCase();
+  String _pais(Map<String, dynamic> j) => '${j['pais'] ?? ''}'.trim().toLowerCase();
+
+  static const int _quimicaObjetivosMax = 4;
+  static const double _quimicaPuntosPorObjetivo = 0.5;
 
   int _quimicaEnRoster(Map<String, dynamic> carta, List<Map<String, dynamic>> roster) {
-    var puntos = 0;
+    var objetivos = 0;
 
     final rolesPresentes = roster.map(_rol).toSet();
     final balance = roster.length >= 4 && _rolesPrincipales.every(rolesPresentes.contains);
-    if (balance) puntos += 1;
+    if (balance) objetivos += 1;
 
     final region = _region(carta);
     if (region.isNotEmpty && roster.where((j) => _region(j) == region).length > 1) {
-      puntos += 1;
+      objetivos += 1;
     }
 
     final equipo = _equipo(carta);
     if (equipo.isNotEmpty && roster.where((j) => _equipo(j) == equipo).length > 1) {
-      puntos += 1;
+      objetivos += 1;
     }
 
-    return puntos;
+    final pais = _pais(carta);
+    if (pais.isNotEmpty && roster.where((j) => _pais(j) == pais).length > 1) {
+      objetivos += 1;
+    }
+
+    return objetivos;
   }
 
   int _quimicaDeCarta(Map<String, dynamic> carta) => _quimicaEnRoster(carta, _seleccionados);
@@ -293,8 +302,8 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     if (roster.isEmpty) return 0;
     final suma = roster.fold<double>(0, (s, j) {
       final ovr = (j['ovr'] ?? 0) as num;
-      final quimica = conQuimica ? _quimicaDeCarta(j) : 0;
-      return s + ovr + quimica;
+      final objetivos = conQuimica ? _quimicaEnRoster(j, roster) : 0;
+      return s + ovr + (objetivos * _quimicaPuntosPorObjetivo);
     });
     return suma / roster.length;
   }
@@ -349,11 +358,11 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     try {
       _rosterRival = await _generarRivalIA();
 
-      final quimicaJugador = _ratingEfectivo(_seleccionados, conQuimica: true) -
-          _ratingEfectivo(_seleccionados, conQuimica: false);
-      final ratingPropioBase = _ratingEfectivo(_seleccionados, conQuimica: true);
-      final ratingRivalBase =
-          _ratingEfectivo(_rosterRival, conQuimica: false) + (quimicaJugador * 0.45);
+      final miMediaBase = _ratingEfectivo(_seleccionados, conQuimica: true);
+      final rivalMediaBase = _ratingEfectivo(_rosterRival, conQuimica: true);
+      final ruidoPartido = (_random.nextDouble() * 6) - 3;
+      final ratingPropioBase = miMediaBase + (ruidoPartido / 2);
+      final ratingRivalBase = rivalMediaBase - (ruidoPartido / 2);
 
       while (!_partidaTerminada()) {
         final numeroRonda = _rondaActual + 1;
@@ -447,10 +456,18 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
           final rachaRival = _rachaActual(false);
           final momentumJugador = rachaJugador >= 3 ? 1 : (rachaRival >= 3 ? -1 : 0);
           final momentumRival = rachaRival >= 3 ? 1 : (rachaJugador >= 3 ? -1 : 0);
+          var miPuntaje =
+              ratingPropioBase + momentumJugador + modificadorPropio + (_random.nextInt(13) - 6);
+          var rivalPuntaje = ratingRivalBase + momentumRival + (_random.nextInt(13) - 6);
 
-          final miPuntaje =
-              ratingPropioBase + momentumJugador + modificadorPropio + (_random.nextInt(19) - 9);
-          final rivalPuntaje = ratingRivalBase + momentumRival + (_random.nextInt(19) - 9);
+          if (_random.nextInt(100) < 8) {
+            final golpe = 6 + _random.nextInt(7);
+            if (_random.nextBool()) {
+              miPuntaje += golpe;
+            } else {
+              rivalPuntaje += golpe;
+            }
+          }
 
           ganeLaRonda = miPuntaje == rivalPuntaje ? _random.nextBool() : miPuntaje > rivalPuntaje;
         }
@@ -567,7 +584,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
       enableDrag: false,
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
+          padding: EdgeInsets.fromLTRB(20, 22, 20, 30 + MediaQuery.of(context).padding.bottom),
           decoration: BoxDecoration(
             color: _kFondoPanel,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -663,7 +680,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
             final espalda = acerto == true && elegido == 'nuestro' && aimNuestro < aimRival;
 
             return Container(
-              padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
+              padding: EdgeInsets.fromLTRB(20, 22, 20, 30 + MediaQuery.of(context).padding.bottom),
               decoration: BoxDecoration(
                 color: _kFondoPanel,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -777,7 +794,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
             final acerto = elegido == null ? null : elegido == indiceMasDebil;
 
             return Container(
-              padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
+              padding: EdgeInsets.fromLTRB(20, 22, 20, 30 + MediaQuery.of(context).padding.bottom),
               decoration: BoxDecoration(
                 color: _kFondoPanel,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -846,7 +863,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
       enableDrag: false,
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
+          padding: EdgeInsets.fromLTRB(20, 22, 20, 30 + MediaQuery.of(context).padding.bottom),
           decoration: BoxDecoration(
             color: _kFondoPanel,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -899,7 +916,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
       enableDrag: false,
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
+          padding: EdgeInsets.fromLTRB(20, 22, 20, 30 + MediaQuery.of(context).padding.bottom),
           decoration: BoxDecoration(
             color: _kFondoPanel,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -1183,7 +1200,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
   Widget _puntitosQuimica(int valor) {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(3, (i) {
+      children: List.generate(_quimicaObjetivosMax, (i) {
         final activo = i < valor;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 1.5),
@@ -1512,7 +1529,7 @@ class _SelectorCartasSheet extends StatelessWidget {
   Widget _puntitos(int valor) {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(3, (i) {
+      children: List.generate(4, (i) {
         final activo = i < valor;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 1.5),
@@ -1537,7 +1554,9 @@ class _SelectorCartasSheet extends StatelessWidget {
     final anchoTarjeta = (anchoDisponible - 12) / 2;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 30),
+      padding: EdgeInsets.fromLTRB(
+        16, 20, 16, 30 + MediaQuery.of(context).padding.bottom,
+      ),
       decoration: BoxDecoration(
         color: _kFondoPanel,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),

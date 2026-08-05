@@ -602,6 +602,11 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     return 'assets/valorant/regiones/$region.png';
   }
 
+  String _rutaBandera(Map<String, dynamic> jugador) {
+    final pais = '${jugador['pais'] ?? ''}'.trim().toLowerCase();
+    return 'assets/valorant/banderas/$pais.png';
+  }
+
   Color _getColorEfectoActivo() {
     switch (_efectoActivo) {
       case _EfectoRareza.dorado: return const Color(0xFFFFD700);
@@ -1452,11 +1457,12 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       _EfectoRareza.ninguno => 0.0,
     };
 
-    const double inicioRegion = 0.00;
-    const double inicioEquipo = 0.24;
-    const double inicioPosicion = 0.48;
-    const double duracionEtapa = 0.24;
-    const double inicioResto = 0.66;
+    const double inicioPais = 0.00;
+    const double inicioRegion = 0.18;
+    const double inicioEquipo = 0.36;
+    const double inicioPosicion = 0.54;
+    const double duracionEtapa = 0.18;
+    const double inicioResto = 0.72;
 
     return GestureDetector(
       onTap: () {
@@ -1488,6 +1494,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                       opacidadRegion: 1.0,
                       opacidadEquipo: 1.0,
                       opacidadPosicion: 1.0,
+                      opacidadPais: 1.0,
                       opacidadResto: opacidadResto,
                     ),
                   ),
@@ -1503,10 +1510,12 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
               );
             }
 
+            final opacidadPais = Curves.easeOut.transform(((t - inicioPais) / duracionEtapa).clamp(0.0, 1.0));
             final opacidadRegion = Curves.easeOut.transform(((t - inicioRegion) / duracionEtapa).clamp(0.0, 1.0));
             final opacidadEquipo = Curves.easeOut.transform(((t - inicioEquipo) / duracionEtapa).clamp(0.0, 1.0));
             final opacidadPosicion = Curves.easeOut.transform(((t - inicioPosicion) / duracionEtapa).clamp(0.0, 1.0));
 
+            final bannerPais = _pulsoEtapa(t, inicioPais, duracionEtapa);
             final bannerRegion = _pulsoEtapa(t, inicioRegion, duracionEtapa);
             final bannerEquipo = _pulsoEtapa(t, inicioEquipo, duracionEtapa);
             final bannerPosicion = _pulsoEtapa(t, inicioPosicion, duracionEtapa);
@@ -1527,6 +1536,41 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
+                      if (bannerPais[0] > 0)
+                        _bannerEtapa(
+                          opacidad: bannerPais[0],
+                          escala: bannerPais[1],
+                          colorGlow: colorGlow,
+                          contenido: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 26,
+                                height: 18,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(2),
+                                  child: Image.asset(
+                                    _rutaBandera(mejorCarta),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        Icon(Icons.flag, color: colorGlow, size: 22),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                '${mejorCarta['pais'] ?? 'País'}'.toUpperCase(),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                  letterSpacing: 1.2,
+                                  shadows: [Shadow(color: colorGlow, blurRadius: 12)],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       if (bannerRegion[0] > 0)
                         _bannerEtapa(
                           opacidad: bannerRegion[0],
@@ -1657,6 +1701,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                           opacidadRegion: opacidadRegion,
                           opacidadEquipo: opacidadEquipo,
                           opacidadPosicion: opacidadPosicion,
+                          opacidadPais: opacidadPais,
                           opacidadResto: opacidadResto,
                         ),
                       ),

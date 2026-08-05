@@ -25,10 +25,12 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
 
   String? _regionFiltro;
   String? _equipoFiltro;
+  String? _paisFiltro;
   _OrdenOvr _ordenOvr = _OrdenOvr.ninguno;
 
   bool _regionExpandida = false;
   bool _equipoExpandido = false;
+  bool _paisExpandido = false;
 
   Map<String, String> _equipoPorRegion = {};
 
@@ -258,8 +260,11 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
 
   String _regionDe(Map<String, dynamic> j) => '${j['region'] ?? ''}'.trim();
   String _equipoDe(Map<String, dynamic> j) => '${j['equipo'] ?? ''}'.trim();
+  String _paisDe(Map<String, dynamic> j) => '${j['pais'] ?? ''}'.trim();
 
   String _rutaRegion(String region) => 'assets/valorant/regiones/${region.toLowerCase()}.png';
+
+  String _rutaBandera(String pais) => 'assets/banderas/${pais.toLowerCase()}.png';
 
   String _rutaEquipo(String equipo) {
     final region = _equipoPorRegion[equipo];
@@ -282,14 +287,30 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
   void _alternarPanelRegion() {
     setState(() {
       _regionExpandida = !_regionExpandida;
-      if (_regionExpandida) _equipoExpandido = false;
+      if (_regionExpandida) {
+        _equipoExpandido = false;
+        _paisExpandido = false;
+      }
     });
   }
 
   void _alternarPanelEquipo() {
     setState(() {
       _equipoExpandido = !_equipoExpandido;
-      if (_equipoExpandido) _regionExpandida = false;
+      if (_equipoExpandido) {
+        _regionExpandida = false;
+        _paisExpandido = false;
+      }
+    });
+  }
+
+  void _alternarPanelPais() {
+    setState(() {
+      _paisExpandido = !_paisExpandido;
+      if (_paisExpandido) {
+        _regionExpandida = false;
+        _equipoExpandido = false;
+      }
     });
   }
 
@@ -312,10 +333,18 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
     });
   }
 
+  void _seleccionarPais(String? pais) {
+    setState(() {
+      _paisFiltro = (_paisFiltro == pais) ? null : pais;
+      _paisExpandido = false;
+    });
+  }
+
   List<Map<String, dynamic>> _aplicarFiltros(List<Map<String, dynamic>> jugadores) {
     var resultado = jugadores.where((j) {
       if (_regionFiltro != null && _regionDe(j) != _regionFiltro) return false;
       if (_equipoFiltro != null && _equipoDe(j) != _equipoFiltro) return false;
+      if (_paisFiltro != null && _paisDe(j) != _paisFiltro) return false;
       return true;
     }).toList();
 
@@ -376,6 +405,12 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                   .toSet()
                   .toList()
                 ..sort();
+              final paises = jugadores
+                  .map(_paisDe)
+                  .where((p) => p.isNotEmpty)
+                  .toSet()
+                  .toList()
+                ..sort();
 
               _equipoPorRegion = {
                 for (final j in jugadores)
@@ -429,6 +464,26 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                                           Icons.shield_outlined, color: Colors.white38, size: 24),
                                     ),
                             ),
+                          if ((regiones.isNotEmpty || equipos.isNotEmpty) && paises.isNotEmpty)
+                            const SizedBox(width: 16),
+                          if (paises.isNotEmpty)
+                            _buildBotonPrincipal(
+                              etiqueta: _paisFiltro?.toUpperCase() ?? 'PAÍS',
+                              expandido: _paisExpandido,
+                              activo: _paisFiltro != null,
+                              onTap: _alternarPanelPais,
+                              contenido: _paisFiltro == null
+                                  ? const Icon(Icons.flag_outlined, color: Colors.white54, size: 26)
+                                  : ClipRRect(
+                                      borderRadius: BorderRadius.circular(3),
+                                      child: Image.asset(
+                                        _rutaBandera(_paisFiltro!),
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => const Icon(
+                                            Icons.flag_outlined, color: Colors.white38, size: 24),
+                                      ),
+                                    ),
+                            ),
                         ],
                       ),
                     ),
@@ -446,6 +501,14 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                       alignment: Alignment.topCenter,
                       child: _equipoExpandido
                           ? _buildPanelEquipos(equiposDisponibles)
+                          : const SizedBox(width: double.infinity, height: 0),
+                    ),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOut,
+                      alignment: Alignment.topCenter,
+                      child: _paisExpandido
+                          ? _buildPanelPaises(paises)
                           : const SizedBox(width: double.infinity, height: 0),
                     ),
                     _buildBannerVenderRepetidas(jugadores),
@@ -718,6 +781,41 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                   ],
                 ],
               ),
+      ),
+    );
+  }
+
+  Widget _buildPanelPaises(List<String> paises) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: SizedBox(
+        height: 78,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          children: [
+            _circuloFiltro(
+              activo: _paisFiltro == null,
+              etiqueta: 'TODOS',
+              onTap: () => _seleccionarPais(null),
+              child: const Icon(Icons.flag_outlined, color: Colors.white54, size: 24),
+            ),
+            for (final pais in paises) ...[
+              const SizedBox(width: 10),
+              _circuloFiltro(
+                activo: _paisFiltro == pais,
+                etiqueta: pais.toUpperCase(),
+                onTap: () => _seleccionarPais(pais),
+                child: Image.asset(
+                  _rutaBandera(pais),
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Icon(Icons.flag_outlined, color: Colors.white38, size: 22),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

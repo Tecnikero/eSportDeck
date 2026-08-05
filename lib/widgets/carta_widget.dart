@@ -6,13 +6,11 @@ class CartaWidget extends StatelessWidget {
   final double width;
   final bool mostrarStats;
 
-  /// Controles opcionales de revelación por capas (para la animación de
-  /// apertura de sobres). Por defecto todo vale 1.0 y la carta se ve
-  /// completa de inmediato, como en cualquier otro lugar de la app.
   final double opacidadRegion;
   final double opacidadEquipo;
   final double opacidadPosicion;
-  final double opacidadResto; // foto, OVR, nombre y stats
+  final double opacidadPais;
+  final double opacidadResto;
 
   const CartaWidget({
     super.key,
@@ -22,6 +20,7 @@ class CartaWidget extends StatelessWidget {
     this.opacidadRegion = 1.0,
     this.opacidadEquipo = 1.0,
     this.opacidadPosicion = 1.0,
+    this.opacidadPais = 1.0,
     this.opacidadResto = 1.0,
   });
 
@@ -42,6 +41,13 @@ class CartaWidget extends StatelessWidget {
     final rareza = '${jugador['rareza'] ?? 'normal'}'.toLowerCase().replaceAll(' ', '_');
     return _fondosPorRareza[rareza] ?? 'assets/valorant/cartas/carta_normal.png';
   }
+
+  String get _rutaBandera {
+    final codigo = '${jugador['pais'] ?? ''}'.trim().toLowerCase();
+    return 'assets/banderas/$codigo.png';
+  }
+
+  bool get _tieneBandera => '${jugador['pais'] ?? ''}'.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -215,6 +221,13 @@ class CartaWidget extends StatelessWidget {
                             size: w * 0.12,
                           ),
                         ),
+                        if (_tieneBandera) ...[
+                          SizedBox(height: h * 0.012),
+                          Opacity(
+                            opacity: opacidadPais,
+                            child: _banderaWidget(size: w * 0.12),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -276,6 +289,23 @@ class CartaWidget extends StatelessWidget {
               );
             },
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _banderaWidget({required double size}) {
+    return Tooltip(
+      message: '${jugador['pais'] ?? ''}'.toUpperCase(),
+      child: Container(
+        width: size,
+        height: size * 0.7,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(0),
+        ),
+        child: Image.asset(
+          _rutaBandera,
         ),
       ),
     );

@@ -6,9 +6,9 @@ import '../widgets/racha_dialog.dart';
 
 
 const List<Map<String, dynamic>> _tramosBasico = [
-  {'min': 0, 'max': 80, 'peso': 70, 'efecto': 'ninguno'},
-  {'min': 81, 'max': 88, 'peso': 24, 'efecto': 'plata'},
-  {'min': 89, 'max': 91, 'peso': 5, 'efecto': 'violeta'},
+  {'min': 0, 'max': 78, 'peso': 70, 'efecto': 'ninguno'},
+  {'min': 79, 'max': 85, 'peso': 24, 'efecto': 'plata'},
+  {'min': 86, 'max': 91, 'peso': 5, 'efecto': 'violeta'},
   {'min': 92, 'max': 99, 'peso': 1, 'efecto': 'dorado'},
 ];
 
