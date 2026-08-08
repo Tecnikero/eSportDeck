@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/carta_widget.dart';
+import '../widgets/carta_mini_widget.dart';
 import '../widgets/sesion_dialog.dart';
 import '../providers/perfil_provider.dart';
 
 enum _OrdenOvr { ninguno, descendente, ascendente }
 
-const Color _kFondo = Color(0xFF050914);
-const Color _kDorado = Color(0xFFFFD700);
-const Color _kFondoPanel = Color(0xFF11172A);
+const Color _kFondo = Color(0xFF0B0C10);
+const Color _kDorado = Color(0xFFD9B65C);
+const Color _kFondoPanel = Color(0xFF1C1E22);
+const Color _kPlata = Color(0xFFC7CBD1);
+const Color _kPlataOscuro = Color(0xFF3A3D42);
 
 class ColeccionScreen extends StatefulWidget {
   const ColeccionScreen({super.key});
@@ -362,13 +365,12 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kFondo,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Colección', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
-        automaticallyImplyLeading: false,
         actions: const [BotonCerrarSesion()],
       ),
       body: Stack(
@@ -550,7 +552,7 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                             child: Stack(
                               clipBehavior: Clip.none,
                               children: [
-                                CartaWidget(jugador: jugador),
+                                CartaMiniWidget(jugador: jugador),
                                 if (cantidad > 1)
                                   Positioned(
                                     top: -6,
@@ -673,14 +675,30 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
             height: 56,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: activo ? _kDorado.withOpacity(0.16) : Colors.white10,
+              gradient: (activo || expandido)
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [_kPlata, _kPlataOscuro],
+                    )
+                  : const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF2A2D32), Color(0xFF17181B)],
+                    ),
               border: Border.all(
-                color: (activo || expandido) ? _kDorado : Colors.white24,
-                width: (activo || expandido) ? 2.5 : 1.5,
+                color: (activo || expandido)
+                    ? Colors.white.withOpacity(0.5)
+                    : Colors.white.withOpacity(0.10),
+                width: (activo || expandido) ? 1.5 : 1.0,
               ),
-              boxShadow: (activo || expandido)
-                  ? [BoxShadow(color: _kDorado.withOpacity(0.4), blurRadius: 8)]
-                  : null,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.35),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: ClipOval(child: Center(child: contenido)),
           ),
@@ -838,14 +856,28 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
               height: 50,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: activo ? _kDorado.withOpacity(0.16) : Colors.white10,
+                gradient: activo
+                    ? const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [_kPlata, _kPlataOscuro],
+                      )
+                    : const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF2A2D32), Color(0xFF17181B)],
+                      ),
                 border: Border.all(
-                  color: activo ? _kDorado : Colors.white24,
-                  width: activo ? 2.5 : 1.5,
+                  color: activo ? Colors.white.withOpacity(0.5) : Colors.white.withOpacity(0.10),
+                  width: activo ? 1.5 : 1.0,
                 ),
-                boxShadow: activo
-                    ? [BoxShadow(color: _kDorado.withOpacity(0.4), blurRadius: 8)]
-                    : null,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.35),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: ClipOval(child: Center(child: child)),
             ),
@@ -917,12 +949,21 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: activo ? _kDorado : Colors.white10,
+          gradient: activo
+              ? const LinearGradient(colors: [_kPlata, _kPlataOscuro])
+              : const LinearGradient(colors: [Color(0xFF2A2D32), Color(0xFF17181B)]),
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: activo ? _kDorado : Colors.white24, width: 1.5),
-          boxShadow: activo
-              ? [BoxShadow(color: _kDorado.withOpacity(0.4), blurRadius: 8)]
-              : null,
+          border: Border.all(
+            color: activo ? Colors.white.withOpacity(0.5) : Colors.white.withOpacity(0.10),
+            width: activo ? 1.5 : 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.35),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

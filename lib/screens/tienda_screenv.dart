@@ -1,9 +1,15 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'sobre_detalle_screenv.dart';
 import '../providers/perfil_provider.dart';
 import '../widgets/racha_dialog.dart';
 
+const Color _kFondo = Color(0xFF0B0C10);
+const Color _kPanel = Color(0xFF1C1E22);
+const Color _kPlata = Color(0xFFC7CBD1);
+const Color _kPlataOscuro = Color(0xFF3A3D42);
+const Color _kDorado = Color(0xFFD9B65C);
 
 const List<Map<String, dynamic>> _tramosBasico = [
   {'min': 0, 'max': 78, 'peso': 70, 'efecto': 'ninguno'},
@@ -12,7 +18,6 @@ const List<Map<String, dynamic>> _tramosBasico = [
   {'min': 92, 'max': 99, 'peso': 1, 'efecto': 'dorado'},
 ];
 
-
 const List<Map<String, dynamic>> tiposSobre = [
   {
     'id': 'basico',
@@ -20,7 +25,7 @@ const List<Map<String, dynamic>> tiposSobre = [
     'precio': 1000,
     'cantidad_cartas': 2,
     'icono': Icons.style_outlined,
-    'imagen': 'assets/valorant/sobres/sobres-beta.png',
+    'imagen': 'assets/valorant/sobres/sobre_normal.png',
     'color': Color(0xFF4A90D9),
     'rarezas': ['Normal'],
     'tramos': _tramosBasico,
@@ -44,7 +49,7 @@ const Map<String, Map<String, dynamic>> sobresGanables = {
     'cantidad_cartas': 3,
     'icono': Icons.emoji_events,
     'imagen': 'assets/valorant/sobres/sobre-premium.png',
-    'color': Color(0xFFFFD700),
+    'color': Color(0xFFD9B65C),
     'rarezas': ['Normal', 'champions', 'finals_champions'],
     'tramos': _tramosPremium,
     'garantia': true,
@@ -74,54 +79,127 @@ class _TiendaScreenState extends State<TiendaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF050914),
+      backgroundColor: _kFondo,
       appBar: AppBar(
         title: const Text('Tienda',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        automaticallyImplyLeading: false,
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           Consumer<PerfilProvider>(
             builder: (context, perfil, _) {
               final dinero = perfil.dinero;
               return Padding(
                 padding: const EdgeInsets.only(right: 16.0),
-                child: Row(
-                  children: [
-                    const Icon(Icons.monetization_on, color: Color(0xFFFFD700), size: 20),
-                    const SizedBox(width: 4),
-                    Text(
-                      dinero == null ? '...' : '$dinero',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                  ],
+                child: _chipMetalico(
+                  icono: Icons.monetization_on,
+                  valor: dinero == null ? '...' : '$dinero',
                 ),
               );
             },
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            _bannerRacha(),
-            _seccionSobresPendientes(),
-            const SizedBox(height: 14),
-            Expanded(
-              child: GridView.builder(
-                itemCount: tiposSobre.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                  childAspectRatio: 0.72,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [_kFondo, Color(0xFF060708)],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              _bannerRacha(),
+              _seccionSobresPendientes(),
+              const SizedBox(height: 14),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'DISPONIBLES HOY',
+                  style: TextStyle(
+                    color: Colors.white38,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
                 ),
-                itemBuilder: (context, index) => _tarjetaSobre(tiposSobre[index]),
               ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: tiposSobre.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  itemBuilder: (context, index) => _tarjetaSobre(tiposSobre[index]),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _chipMetalico({required IconData icono, required String valor}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF2A2D32), Color(0xFF17181B)],
+        ),
+        border: Border.all(color: Colors.white.withOpacity(0.10)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icono, color: _kDorado, size: 16),
+          const SizedBox(width: 6),
+          Text(valor, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  Widget _panelMetalico({
+    required Widget child,
+    VoidCallback? onTap,
+    double borderRadius = 16,
+    Color bordeAcento = Colors.white,
+    double bordeOpacidad = 0.10,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(borderRadius),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.white.withOpacity(0.08), _kPanel.withOpacity(0.55)],
             ),
-          ],
+            border: Border.all(color: bordeAcento.withOpacity(bordeOpacidad), width: 1.2),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 5)),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(borderRadius),
+              onTap: onTap,
+              splashColor: _kPlata.withOpacity(0.08),
+              highlightColor: Colors.white.withOpacity(0.03),
+              child: child,
+            ),
+          ),
         ),
       ),
     );
@@ -130,24 +208,18 @@ class _TiendaScreenState extends State<TiendaScreen> {
   Widget _bannerRacha() {
     return Consumer<PerfilProvider>(
       builder: (context, perfil, _) {
-        return GestureDetector(
+        return _panelMetalico(
+          borderRadius: 14,
+          bordeAcento: perfil.recompensaDiariaDisponible ? _kDorado : Colors.white,
+          bordeOpacidad: perfil.recompensaDiariaDisponible ? 0.55 : 0.10,
           onTap: perfil.recompensaDiariaDisponible
               ? () => mostrarRachaDiariaSiCorresponde(context)
               : null,
-          child: Container(
-            width: double.infinity,
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFD700).withOpacity(0.08),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: const Color(0xFFFFD700).withOpacity(perfil.recompensaDiariaDisponible ? 0.7 : 0.25),
-                width: perfil.recompensaDiariaDisponible ? 1.5 : 1,
-              ),
-            ),
             child: Row(
               children: [
-                const Icon(Icons.local_fire_department, color: Color(0xFFFFD700), size: 22),
+                const Icon(Icons.local_fire_department, color: _kDorado, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -158,7 +230,7 @@ class _TiendaScreenState extends State<TiendaScreen> {
                   ),
                 ),
                 if (perfil.recompensaDiariaDisponible)
-                  const Icon(Icons.chevron_right, color: Color(0xFFFFD700)),
+                  const Icon(Icons.chevron_right, color: _kDorado),
               ],
             ),
           ),
@@ -178,11 +250,11 @@ class _TiendaScreenState extends State<TiendaScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              const Row(
                 children: [
-                  const Icon(Icons.inventory_2, color: Color(0xFFFFD700), size: 16),
-                  const SizedBox(width: 6),
-                  const Text('MIS SOBRES',
+                  Icon(Icons.inventory_2, color: _kDorado, size: 16),
+                  SizedBox(width: 6),
+                  Text('MIS SOBRES',
                       style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
                 ],
               ),
@@ -191,34 +263,24 @@ class _TiendaScreenState extends State<TiendaScreen> {
                 final definicion = sobresGanables[entrada.key];
                 if (definicion == null) return const SizedBox.shrink();
                 final cantidad = entrada.value;
-                final color = definicion['color'] as Color;
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: color.withOpacity(0.6)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(definicion['icono'] as IconData, color: color, size: 22),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text('${definicion['nombre']}  x$cantidad',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13.5)),
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _panelMetalico(
+                    borderRadius: 14,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      child: Row(
+                        children: [
+                          _iconoMetalico(definicion['icono'] as IconData, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text('${definicion['nombre']}  x$cantidad',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13.5)),
+                          ),
+                          _botonMetalico('ABRIR', () => _abrirSobrePendiente(definicion)),
+                        ],
                       ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: color,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        onPressed: () => _abrirSobrePendiente(definicion),
-                        child: const Text('ABRIR',
-                            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
-                      ),
-                    ],
+                    ),
                   ),
                 );
               }),
@@ -241,9 +303,44 @@ class _TiendaScreenState extends State<TiendaScreen> {
     }
   }
 
+  Widget _iconoMetalico(IconData icono, {double size = 26}) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_kPlata, _kPlataOscuro],
+        ),
+      ),
+      child: Icon(icono, color: const Color(0xFF17181B), size: size),
+    );
+  }
+
+  Widget _botonMetalico(String texto, VoidCallback onPressed) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onPressed,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            gradient: const LinearGradient(colors: [_kPlata, _kPlataOscuro]),
+            border: Border.all(color: Colors.white.withOpacity(0.3)),
+          ),
+          child: Text(texto,
+              style: const TextStyle(color: Color(0xFF17181B), fontWeight: FontWeight.bold, fontSize: 12)),
+        ),
+      ),
+    );
+  }
+
   Widget _tarjetaSobre(Map<String, dynamic> sobre) {
-    final color = sobre['color'] as Color;
-    return GestureDetector(
+    return _panelMetalico(
+      borderRadius: 18,
       onTap: () async {
         final resultado = await Navigator.push<bool>(
           context,
@@ -253,45 +350,59 @@ class _TiendaScreenState extends State<TiendaScreen> {
           context.read<PerfilProvider>().cargar();
         }
       },
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [color.withOpacity(0.35), const Color(0xFF11172A)],
-          ),
-          border: Border.all(color: color.withOpacity(0.6)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    sobre['nombre'],
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    sobre['descripcion'],
+                    style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.3),
+                  ),
+                  const SizedBox(height: 4),
+                  _indicadorPity(sobre['id'] as String),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(30),
+                      gradient: const LinearGradient(colors: [_kPlata, _kPlataOscuro]),
+                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.monetization_on, color: Color(0xFF17181B), size: 15),
+                        const SizedBox(width: 5),
+                        Text('${sobre['precio']}',
+                            style: const TextStyle(
+                                color: Color(0xFF17181B), fontWeight: FontWeight.bold, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
             SizedBox(
-              height: 90,
+              width: 90,
+              height: 110,
               child: Image.asset(
                 sobre['imagen'] as String,
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) =>
-                    Icon(sobre['icono'] as IconData, size: 64, color: color),
+                    _iconoMetalico(sobre['icono'] as IconData, size: 34),
               ),
             ),
-            const SizedBox(height: 14),
-            Text(
-              sobre['nombre'],
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.monetization_on, color: Color(0xFFFFD700), size: 15),
-                const SizedBox(width: 3),
-                Text('${sobre['precio']}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-              ],
-            ),
-            const SizedBox(height: 6),
-            _indicadorPity(sobre['id'] as String),
           ],
         ),
       ),
@@ -307,7 +418,7 @@ class _TiendaScreenState extends State<TiendaScreen> {
         return Text(
           faltan <= 2 ? '¡Épica a $faltan sobres!' : 'Épica en $faltan',
           style: TextStyle(
-            color: faltan <= 2 ? const Color(0xFF9B59B6) : Colors.white38,
+            color: faltan <= 2 ? _kDorado : Colors.white38,
             fontSize: 10.5,
             fontWeight: faltan <= 2 ? FontWeight.bold : FontWeight.normal,
           ),

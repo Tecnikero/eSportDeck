@@ -32,14 +32,21 @@ class CartaWidget extends StatelessWidget {
   static const Alignment _alineacionFoto = Alignment.center;
 
   static const Map<String, String> _fondosPorRareza = {
-    'Normal': 'assets/valorant/cartas/carta_normal.png',
     'champions': 'assets/valorant/cartas/carta_champions.png',
     'finals_champions': 'assets/valorant/cartas/carta_finals_champions.png',
   };
 
+  static const String _fondoNormalOro = 'assets/valorant/cartas/carta_normal_oro.png';
+  static const String _fondoNormalPlata = 'assets/valorant/cartas/carta_normal_plata.png';
+  static const int _umbralOvrOro = 79;
+
   String get _rutaFondo {
     final rareza = '${jugador['rareza'] ?? 'normal'}'.toLowerCase().replaceAll(' ', '_');
-    return _fondosPorRareza[rareza] ?? 'assets/valorant/cartas/carta_normal.png';
+    if (rareza == 'normal') {
+      final ovr = (jugador['ovr'] ?? 0) as num;
+      return ovr >= _umbralOvrOro ? _fondoNormalOro : _fondoNormalPlata;
+    }
+    return _fondosPorRareza[rareza] ?? _fondoNormalPlata;
   }
 
   String get _rutaBandera {
@@ -81,24 +88,12 @@ class CartaWidget extends StatelessWidget {
                   Positioned.fill(
                     child: Image.asset(
                       _rutaFondo,
-                      fit: BoxFit.fill,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.red.withOpacity(0.5),
-                          child: const Center(
-                            child: Text(
-                              "Error:\nRevisa pubspec.yaml\no la ruta de la imagen",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.white, fontSize: 12),
-                            ),
-                          ),
-                        );
-                      },
+                      fit: BoxFit.fill, 
                     ),
                   ),
 
                   Positioned(
-                    top: h * 0.035,
+                    top: h * 0.092,
                     left: 0,
                     right: 0,
                     height: alturaFoto - (h * 0.035),
@@ -156,7 +151,7 @@ class CartaWidget extends StatelessWidget {
                   ),
 
                   Positioned(
-                    top: h * 0.046,
+                    top: h * 0.045,
                     right: w * 0.07,
                     width: w * 0.235,
                     height: w * 0.235,
@@ -233,7 +228,7 @@ class CartaWidget extends StatelessWidget {
                   ),
 
                   Positioned(
-                    top: alturaFoto - (w * 0.08),
+                    top: alturaFoto - (w * 0.7),
                     left: w * 0.08,
                     right: w * 0.08,
                     child: Opacity(
@@ -256,7 +251,7 @@ class CartaWidget extends StatelessWidget {
 
                   if (mostrarStats)
                     Positioned(
-                      top: alturaFoto + (h * 0.03),
+                      top: alturaFoto + (h * 0.02),
                       left: w * 0.18,
                       right: w * 0.18,
                       bottom: h * 0.07,

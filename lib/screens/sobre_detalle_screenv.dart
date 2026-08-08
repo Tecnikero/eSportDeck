@@ -9,6 +9,10 @@ import '../providers/perfil_provider.dart';
 
 enum _EfectoRareza { ninguno, plata, violeta, dorado }
 
+const Color _kPlataUI = Color(0xFFC7CBD1);
+const Color _kPlataOscuraUI = Color(0xFF3A3D42);
+const Color _kAcentoUI = Color(0xFFD9B65C);
+
 class SobreDetalleScreen extends StatefulWidget {
   final Map<String, dynamic> sobre;
   const SobreDetalleScreen({super.key, required this.sobre});
@@ -1021,27 +1025,39 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
             const SizedBox(height: 16),
           ],
           if (_comprando)
-            const CircularProgressIndicator(color: Color(0xFFFFD700))
+            const CircularProgressIndicator(color: _kAcentoUI)
           else ...[
             SizedBox(
               width: double.infinity,
               height: 54,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: color,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [_kPlataUI, _kPlataOscuraUI],
+                  ),
+                  border: Border.all(color: Colors.white.withOpacity(0.3)),
                 ),
-                onPressed: _comprar,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.monetization_on, color: Colors.black),
-                    const SizedBox(width: 8),
-                    Text(
-                      'ABRIR 1 (${sobre['precio']})',
-                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(15),
+                    onTap: _comprar,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.monetization_on, color: Color(0xFF17181B)),
+                        const SizedBox(width: 8),
+                        Text(
+                          'ABRIR 1 (${sobre['precio']})',
+                          style: const TextStyle(
+                              color: Color(0xFF17181B), fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -1051,18 +1067,18 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
               height: 54,
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: const Color(0xFFFFD700), width: 2),
+                  side: BorderSide(color: _kAcentoUI.withOpacity(0.7), width: 1.5),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                 ),
                 onPressed: _comprarYAbrirBulk,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.bolt, color: Color(0xFFFFD700)),
+                    const Icon(Icons.bolt, color: _kAcentoUI),
                     const SizedBox(width: 8),
                     Text(
                       'ABRIR x5 ($precioBulk) · -10%',
-                      style: const TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold, fontSize: 15),
+                      style: const TextStyle(color: _kAcentoUI, fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                   ],
                 ),
@@ -1081,9 +1097,13 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.white.withOpacity(0.06), Colors.white.withOpacity(0.02)],
+        ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: _kPlataUI.withOpacity(0.25)),
       ),
       child: _filaPity(
         'Épica garantizada en',
@@ -1801,13 +1821,13 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
             height: 54,
             child: OutlinedButton(
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFFFFD700), width: 2),
+                side: BorderSide(color: _kPlataUI.withOpacity(0.5), width: 1.5),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
               ),
               onPressed: () => Navigator.pop(context, true),
               child: const Text(
                 'VOLVER A LA TIENDA',
-                style: TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold, fontSize: 16),
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
               ),
             ),
           ),

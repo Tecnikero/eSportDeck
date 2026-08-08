@@ -6,9 +6,6 @@ const Color _kDorado = Color(0xFFFFD700);
 const Color _kFondoPanel = Color(0xFF11172A);
 const Color _kRojo = Color(0xFFE30425);
 
-/// Revisa si hay actualización y, si corresponde, muestra el diálogo.
-/// Llamar después de que el usuario haya iniciado sesión (por ejemplo en
-/// MainNavScreen.initState, igual que mostrarRachaDiariaSiCorresponde).
 Future<void> mostrarActualizacionSiCorresponde(BuildContext context) async {
   final actualizacion = context.read<ActualizacionProvider>();
   await actualizacion.revisar();

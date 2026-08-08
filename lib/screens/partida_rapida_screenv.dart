@@ -429,15 +429,9 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     try {
       _rosterRival = await _generarRivalIA();
 
-      // Media efectiva de cada equipo: OVR promedio + química propia
-      // (cada uno de los 4 objetivos de química vale 0.5 puntos). El rival
-      // también tiene su propia química calculada sobre su roster.
       final miMediaBase = _ratingEfectivo(_seleccionados, conQuimica: true) + _bonoSinergia;
       final rivalMediaBase = _ratingEfectivo(_rosterRival, conQuimica: true);
 
-      // Capa 1 de suerte: "forma del día". Se sortea una sola vez por
-      // partido y desplaza la diferencia de medias en ±3 puntos (≈ ±3% de
-      // probabilidad), repartido entre ambos equipos.
       final ruidoPartido = (_random.nextDouble() * 6) - 3;
       final ratingPropio = miMediaBase + (ruidoPartido / 2);
       final ratingRival = rivalMediaBase - (ruidoPartido / 2);
@@ -1522,7 +1516,7 @@ class _SelectorCartasSheet extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              boxShadow: [BoxShadow(color: _kRojo.withOpacity(0.35), blurRadius: 10)],
+              border: Border.all(color: _kRojo.withOpacity(0.5), width: 1.5),
             ),
             child: CartaWidget(jugador: carta, width: ancho),
           ),

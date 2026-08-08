@@ -406,45 +406,45 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
               : 'Contra todo pronóstico, el equipo remontó con lo justo.';
         }
         else if (numeroRonda != 1 && numeroRonda != 13 && _random.nextDouble() < 0.30) {
-          final resultado = await _mostrarDueloAim();
-          if (resultado != null) {
-            modificadorPropio += resultado;
-            lineaEvento = resultado >= 3
-                ? '¡Jugada táctica por la espalda! El duelo se ganó como el claro underdog.'
-                : (resultado > 0
-                    ? 'El duelo 1v1 se leyó correctamente.'
-                    : 'La apuesta del duelo 1v1 no se cumplió.');
+          final gano1v1 = await _mostrarDueloAim();
+          if (gano1v1 != null) {
+            resultadoForzadoManual = gano1v1;
+            lineaEvento = gano1v1
+                ? '¡Duelo 1v1 ganado! El resultado del duelo definió la ronda.'
+                : 'El duelo 1v1 se perdió y con él, la ronda.';
           }
         }
         else if (_rachaActual(false) >= 2 && _random.nextDouble() < 0.45) {
-          final resultado = await _mostrarClutch();
-          if (resultado != null) {
-            modificadorPropio += resultado;
-            lineaEvento = resultado > 0
-                ? '¡Clutch leído a la perfección! Cayó primero el rival más débil.'
-                : 'La lectura del clutch falló: se enfrentó primero al rival equivocado.';
+          final ganoClutch = await _mostrarClutch();
+          if (ganoClutch != null) {
+            resultadoForzadoManual = ganoClutch;
+            lineaEvento = ganoClutch
+                ? '¡Clutch leído a la perfección! El jugador cerró la ronda él solo.'
+                : 'La lectura del clutch falló: se enfrentó primero al rival equivocado y la ronda se perdió.';
           }
         }
         else if (_rachaActual(true) >= 2 && _random.nextDouble() < 0.35) {
           final resultado = await _mostrarAntiEco();
-          if (resultado != null) {
+          if (resultado is bool) {
+            resultadoForzadoManual = resultado;
+            lineaEvento = resultado
+                ? '¡Rush perfecto al anti-eco! El rival no tuvo tiempo de reaccionar y la ronda cayó.'
+                : 'El rush salió mal: el rival defendió mejor de lo esperado y la ronda se perdió.';
+          } else if (resultado is double) {
             modificadorPropio += resultado;
-            lineaEvento = resultado >= 3
-                ? '¡Rush perfecto al anti-eco! El rival no tuvo tiempo de reaccionar.'
-                : (resultado > 0
-                    ? 'Se jugó con calma y se cerró la ronda sin sobresaltos.'
-                    : 'El rush salió mal: el rival defendió mejor de lo esperado.');
+            lineaEvento = 'Se jugó con calma y se cerró la ronda sin sobresaltos.';
           }
         }
         else if (_rachaActual(true) >= 3 && _random.nextDouble() < 0.30) {
           final resultado = await _mostrarMomentoAce();
-          if (resultado != null) {
-            modificadorPropio += resultado;
-            lineaEvento = resultado >= 4
+          if (resultado is bool) {
+            resultadoForzadoManual = resultado;
+            lineaEvento = resultado
                 ? '¡ACE! El jugador en racha cerró la ronda él solo.'
-                : (resultado > 0
-                    ? 'Se jugó seguro y se cerró la ronda sin arriesgar de más.'
-                    : 'La búsqueda del ace terminó exponiendo al equipo.');
+                : 'La búsqueda del ace terminó exponiendo al equipo y la ronda se perdió.';
+          } else if (resultado is double) {
+            modificadorPropio += resultado;
+            lineaEvento = 'Se jugó seguro y se cerró la ronda sin arriesgar de más.';
           }
         }
 
@@ -628,7 +628,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     );
   }
 
-  Future<double?> _mostrarDueloAim() async {
+  Future<bool?> _mostrarDueloAim() async {
     if (_seleccionados.isEmpty || _rosterRival.isEmpty) return null;
     final nuestro = _seleccionados[_random.nextInt(_seleccionados.length)];
     final rival = _rosterRival[_random.nextInt(_rosterRival.length)];
@@ -638,7 +638,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     final ruido = _random.nextDouble() * 14 - 7;
     final ganaNuestro = (aimNuestro + ruido) >= aimRival;
 
-    return showModalBottomSheet<double>(
+    return showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
@@ -658,18 +658,10 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
               });
 
               final acerto = (opcion == 'nuestro' && ganaNuestro) || (opcion == 'rival' && !ganaNuestro);
-              double resultado;
-              if (!acerto) {
-                resultado = -1.5;
-              } else if (opcion == 'nuestro' && aimNuestro < aimRival) {
-                resultado = 3.5;
-              } else {
-                resultado = 1.2;
-              }
 
               Future.delayed(const Duration(milliseconds: 1100), () {
                 if (Navigator.of(sheetContext).canPop()) {
-                  Navigator.of(sheetContext).pop(resultado);
+                  Navigator.of(sheetContext).pop(acerto);
                 }
               });
             }
@@ -699,9 +691,9 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                   Text(
                     revelado
                         ? (espalda
-                            ? '¡Leíste el duelo como el claro underdog!'
-                            : (acerto! ? 'Leíste bien el duelo.' : 'No acertaste el duelo.'))
-                        : 'El AIM de ambos está oculto. ¿Quién gana el duelo?',
+                            ? '¡Ganaste el duelo como el claro underdog! La ronda es tuya.'
+                            : (acerto! ? '¡Ganaste el duelo! La ronda es tuya.' : 'Perdiste el duelo. La ronda se pierde.'))
+                        : 'El AIM de ambos está oculto. ¿Quién gana el duelo?\nEsto define el resultado de la ronda.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: _kTextoSuave, fontSize: 12.5),
                   ),
@@ -744,8 +736,8 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                     const SizedBox(height: 26),
                     _BannerResultadoEvento(
                       acerto: acerto!,
-                      textoAcerto: espalda ? '¡JUGADA POR LA ESPALDA!' : 'ACERTASTE EL DUELO',
-                      textoFalla: 'NO ACERTASTE',
+                      textoAcerto: espalda ? '¡JUGADA POR LA ESPALDA! RONDA GANADA' : 'RONDA GANADA',
+                      textoFalla: 'RONDA PERDIDA',
                     ),
                   ],
                 ],
@@ -757,14 +749,19 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     );
   }
 
-  Future<double?> _mostrarClutch() async {
-    if (_rosterRival.isEmpty) return null;
+  Future<bool?> _mostrarClutch() async {
+    if (_rosterRival.isEmpty || _seleccionados.isEmpty) return null;
     final numRivales = (_rosterRival.length >= 3 && _random.nextBool()) ? 3 : min(2, _rosterRival.length);
     final rivales = (List<Map<String, dynamic>>.from(_rosterRival)..shuffle(_random)).take(numRivales).toList();
     final clus = rivales.map((r) => ((r['clu'] ?? 50) as num).toDouble()).toList();
     final indiceMasDebil = clus.indexOf(clus.reduce(min));
 
-    return showModalBottomSheet<double>(
+    final ordenPorClutch = List<Map<String, dynamic>>.from(_seleccionados)
+      ..sort((a, b) => (((b['clu'] ?? 0) as num)).compareTo((a['clu'] ?? 0) as num));
+    final clutcher = ordenPorClutch.first;
+    final clutcherClu = ((clutcher['clu'] ?? 50) as num).toDouble();
+
+    return showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
@@ -783,10 +780,10 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                 revelado = true;
               });
 
-              final resultado = i == indiceMasDebil ? 2.2 : -1.0;
+              final acerto = i == indiceMasDebil;
               Future.delayed(const Duration(milliseconds: 1100), () {
                 if (Navigator.of(sheetContext).canPop()) {
-                  Navigator.of(sheetContext).pop(resultado);
+                  Navigator.of(sheetContext).pop(acerto);
                 }
               });
             }
@@ -812,12 +809,32 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                   const SizedBox(height: 6),
                   Text(
                     revelado
-                        ? (acerto! ? '¡Leíste bien al rival más débil!' : 'Te enfrentaste al rival equivocado.')
-                        : 'La estadística CLUTCH de los rivales está oculta.\n¿A cuál enfrentas primero?',
+                        ? (acerto! ? '¡CLUTCH GANADO! La ronda es tuya.' : 'Te enfrentaste al rival equivocado. Ronda perdida.')
+                        : 'La estadística CLUTCH de los rivales está oculta.\n¿A cuál enfrentas primero? El resultado define la ronda.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: _kTextoSuave, fontSize: 12.5),
                   ),
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 20),
+
+                  _CartaConStatOculta(
+                    jugador: clutcher,
+                    etiquetaStat: 'CLU',
+                    valorStat: clutcherClu,
+                    width: 100,
+                    revelado: true,
+                    destacado: revelado && acerto == true,
+                    colorDestacado: _kDorado,
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 4, bottom: 4),
+                    child: Text(
+                      'TU CLUTCHER',
+                      style: TextStyle(color: Colors.white38, fontSize: 10.5, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                    ),
+                  ),
+                  const Icon(Icons.arrow_downward_rounded, color: Colors.white24, size: 18),
+                  const SizedBox(height: 10),
+
                   Wrap(
                     alignment: WrapAlignment.center,
                     spacing: 14,
@@ -829,7 +846,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                           jugador: rivales[i],
                           etiquetaStat: 'CLU',
                           valorStat: clus[i],
-                          width: 96,
+                          width: 90,
                           revelado: revelado,
                           destacado: revelado && i == indiceMasDebil,
                           colorDestacado: _kDorado,
@@ -838,11 +855,11 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                     }),
                   ),
                   if (revelado) ...[
-                    const SizedBox(height: 26),
+                    const SizedBox(height: 22),
                     _BannerResultadoEvento(
                       acerto: acerto!,
-                      textoAcerto: '¡CLUTCH GANADO!',
-                      textoFalla: 'CLUTCH PERDIDO',
+                      textoAcerto: 'RONDA GANADA',
+                      textoFalla: 'RONDA PERDIDA',
                     ),
                   ],
                 ],
@@ -854,8 +871,8 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     );
   }
 
-  Future<double?> _mostrarAntiEco() {
-    return showModalBottomSheet<double>(
+  Future<dynamic> _mostrarAntiEco() {
+    return showModalBottomSheet<dynamic>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
@@ -889,15 +906,15 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                 icono: Icons.flash_on,
                 color: _kRojo,
                 titulo: 'RUSHEAR EL SITIO',
-                subtitulo: 'Alto riesgo: si sale bien, ventaja grande.\nSi sale mal, el equipo queda expuesto.',
-                onTap: () => Navigator.of(context).pop(_random.nextDouble() < 0.65 ? 3.2 : -2.0),
+                subtitulo: '65% de ganar la ronda al instante.\nSi sale mal, la ronda se pierde directo.',
+                onTap: () => Navigator.of(context).pop(_random.nextDouble() < 0.65),
               ),
               const SizedBox(height: 12),
               _opcionEvento(
                 icono: Icons.shield_moon,
                 color: _kAzulEvento,
                 titulo: 'JUGAR CON CALMA',
-                subtitulo: 'Ventaja pequeña pero garantizada.',
+                subtitulo: 'Ventaja pequeña pero garantizada,\nsin arriesgar la ronda.',
                 onTap: () => Navigator.of(context).pop(0.8),
               ),
             ],
@@ -907,8 +924,8 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     );
   }
 
-  Future<double?> _mostrarMomentoAce() {
-    return showModalBottomSheet<double>(
+  Future<dynamic> _mostrarMomentoAce() {
+    return showModalBottomSheet<dynamic>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
@@ -942,15 +959,15 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                 icono: Icons.emoji_events,
                 color: _kDorado,
                 titulo: 'BUSCAR EL ACE',
-                subtitulo: '50% de gloria total, 50% de quedar expuesto.',
-                onTap: () => Navigator.of(context).pop(_random.nextDouble() < 0.5 ? 4.2 : -2.0),
+                subtitulo: '50% de ganar la ronda con gloria total.\n50% de quedar expuesto y perderla.',
+                onTap: () => Navigator.of(context).pop(_random.nextDouble() < 0.5),
               ),
               const SizedBox(height: 12),
               _opcionEvento(
                 icono: Icons.check_circle_outline,
                 color: _kAzulEvento,
                 titulo: 'CERRAR SEGURO',
-                subtitulo: 'Ventaja pequeña pero garantizada.',
+                subtitulo: 'Ventaja pequeña pero garantizada,\nsin arriesgar la ronda.',
                 onTap: () => Navigator.of(context).pop(0.8),
               ),
             ],
@@ -1606,7 +1623,7 @@ class _SelectorCartasSheet extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              boxShadow: [BoxShadow(color: _kRojo.withOpacity(0.35), blurRadius: 10)],
+              border: Border.all(color: _kRojo.withOpacity(0.5), width: 1.5),
             ),
             child: CartaWidget(jugador: carta, width: ancho),
           ),
