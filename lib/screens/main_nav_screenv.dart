@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'coleccion_screenv.dart';
+import 'galeria_cartas_screenv.dart';
 import 'tienda_screenv.dart';
 import 'modo_juego_screenv.dart';
 import '../providers/perfil_provider.dart';
@@ -95,6 +96,13 @@ class _MainNavScreenState extends State<MainNavScreen> {
                   icono: Icons.collections_bookmark,
                   onTap: () => _ir(const ColeccionScreen()),
                 ),
+                const SizedBox(height: 14),
+                _cardAncha(
+                  titulo: 'GALERÍA',
+                  subtitulo: 'Descubre todas las cartas que existen',
+                  icono: Icons.grid_view_rounded,
+                  onTap: () => _ir(const GaleriaCartasScreen()),
+                ),
               ],
             ),
           ),
@@ -179,7 +187,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Valorant Champions Tour 2026',
+            'Valorant Champions Draft 2026',
             style: TextStyle(
               color: Colors.white,
               fontSize: 26,

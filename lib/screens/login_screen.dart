@@ -49,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       return;
     } catch (e) {
-      debugPrint('ERROR AL INICIAR SESION: $e');
+      //debugPrint('ERROR AL INICIAR SESION: $e');
       if (!mounted) return;
       _mostrarError('Error: Revisa tus credenciales o crea una cuenta.');
     }
@@ -79,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       _mostrarMensaje('¡Cuenta creada con éxito! Ahora inicia sesión.');
     } catch (e) {
-      debugPrint('ERROR AL CREAR CUENTA: $e');
+      //debugPrint('ERROR AL CREAR CUENTA: $e');
       if (!mounted) return;
       _mostrarError('Error: $e');
     }

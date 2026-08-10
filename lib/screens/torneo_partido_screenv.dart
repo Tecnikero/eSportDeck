@@ -6,9 +6,11 @@ import '../widgets/carta_widget.dart';
 const Color _kFondo = Color(0xFF0A0A0A);
 const Color _kFondoPanel = Color(0xFF1A0E0E);
 const Color _kRojo = Color(0xFFE30425);
+const Color _kRojoOscuro = Color(0xFF7A0000);
 const Color _kDorado = Color(0xFFFFD700);
 const Color _kTextoSuave = Color(0xFFB9B4B4);
 const Color _kBorde = Color(0x33FFFFFF);
+const Color _kCian = Color(0xFF29E0E0);
 
 const int _rondasParaGanar = 5;
 const List<String> _rolesPrincipales = ['DUE', 'INI', 'CON', 'CEN'];
@@ -480,6 +482,8 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
               const SizedBox(height: 4),
               const Text('Asigna un agente a cada jugador para este mapa',
                   style: TextStyle(color: _kTextoSuave, fontSize: 12)),
+              const SizedBox(height: 14),
+              _buildPanelQuimica(),
             ],
           ),
         ),
@@ -508,7 +512,14 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
                         children: [
                           Text('${carta['nombre'] ?? ''}',
                               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                          Text(_rol(carta), style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Text(_rol(carta), style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                              const SizedBox(width: 8),
+                              _puntitosQuimica(_quimicaDeCarta(carta, widget.titularesUsuario)),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -552,96 +563,504 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
     );
   }
 
-  Widget _buildSimulando() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildPanelQuimica() {
+    final roster = widget.titularesUsuario;
+    final rolesPresentes = roster.map(_rol).toSet();
+    final rolesOk = _rolesPrincipales.where(rolesPresentes.contains).length;
+    final regionOk = roster.any(
+        (j) => _region(j).isNotEmpty && roster.where((k) => _region(k) == _region(j)).length > 1);
+    final equipoOk = roster.any(
+        (j) => _equipo(j).isNotEmpty && roster.where((k) => _equipo(k) == _equipo(j)).length > 1);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: _kFondoPanel,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _kBorde),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              const Icon(Icons.star, color: _kDorado, size: 18),
+              const Icon(Icons.bolt, color: _kDorado, size: 18),
               const SizedBox(width: 6),
-              Text('TU EQUIPO',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15)),
-              const SizedBox(width: 14),
-              Text('$_rondasUsuario', style: const TextStyle(color: _kDorado, fontSize: 26, fontWeight: FontWeight.w900)),
-              const Text('  -  ', style: TextStyle(color: Colors.white38, fontSize: 22)),
-              Text('$_rondasRival', style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
-              const SizedBox(width: 14),
-              Flexible(
-                child: Text(widget.nombreRival,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 13)),
-              ),
+              const Text('Química del equipo',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+              const Spacer(),
+              Text('$_quimicaTotalPromedio/3',
+                  style: const TextStyle(color: _kDorado, fontSize: 13, fontWeight: FontWeight.bold)),
             ],
           ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: (_quimicaTotalPromedio / 3).clamp(0, 1).toDouble(),
+              minHeight: 6,
+              backgroundColor: Colors.white10,
+              valueColor: const AlwaysStoppedAnimation(_kDorado),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _miniIndicador(Icons.groups, 'Roles', '$rolesOk/4', rolesOk == 4),
+              _miniIndicador(Icons.public, 'Región', regionOk ? 'Sí' : 'No', regionOk),
+              _miniIndicador(Icons.shield, 'Equipo', equipoOk ? 'Sí' : 'No', equipoOk),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  int get _quimicaTotalPromedio {
+    final roster = widget.titularesUsuario;
+    if (roster.isEmpty) return 0;
+    final suma = roster.fold<int>(0, (s, j) => s + _quimicaDeCarta(j, roster));
+    return (suma / roster.length).round();
+  }
+
+  Widget _miniIndicador(IconData icono, String label, String valor, bool activo) {
+    final color = activo ? _kDorado : Colors.white38;
+    return Column(
+      children: [
+        Icon(icono, size: 16, color: color),
+        const SizedBox(height: 3),
+        Text(label, style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w600)),
+        Text(valor, style: TextStyle(color: activo ? Colors.white : Colors.white38, fontSize: 11, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _puntitosQuimica(int valor) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(4, (i) {
+        final activo = i < valor;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 1.5),
+          child: Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: activo ? _kDorado : Colors.transparent,
+              border: Border.all(color: activo ? _kDorado : Colors.white30, width: 1),
+              boxShadow: activo ? [BoxShadow(color: _kDorado.withOpacity(0.6), blurRadius: 4)] : null,
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildSimulando() {
+    final rachaUsuario = _racha(true);
+    final rachaRival = _racha(false);
+    final Map<String, dynamic>? ultimoEvento =
+        _rondaEnVivo ?? (_timelineEventos.isNotEmpty ? _timelineEventos.last : null);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Container(color: _kFondo),
+        Positioned.fill(
+          child: Opacity(
+            opacity: 0.62,
+            child: Image.asset(
+              _mapaActual['imagen'] ?? '',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+            ),
+          ),
         ),
-        if (_resolviendoRonda && _rondaEnVivo != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: _kFondoPanel,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _kRojo.withOpacity(0.6)),
-              ),
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [_kFondo.withOpacity(0.35), _kFondo.withOpacity(0.5), _kFondo.withOpacity(0.35)],
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 18),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('RONDA ${_rondaEnVivo!['ronda']}',
-                      style: const TextStyle(color: _kRojo, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.6)),
-                  const SizedBox(height: 6),
-                  for (final linea in (_rondaEnVivo!['lineas'] as List).cast<String>())
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text('•  $linea', style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
-                    ),
-                  if ((_rondaEnVivo!['lineas'] as List).isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 2),
-                      child: Text('Jugando ronda...', style: TextStyle(color: Colors.white38, fontSize: 12.5)),
-                    ),
+                  _buildMarcador(),
+                  const SizedBox(height: 10),
+                  _buildLineaRondas(),
+                  const SizedBox(height: 16),
+                  _buildBarraMomentum(rachaUsuario, rachaRival),
+                  const SizedBox(height: 16),
+                  _buildPanelEvento(ultimoEvento),
+                  const SizedBox(height: 14),
+                  _buildInfoInferior(),
                 ],
               ),
             ),
           ),
-        Expanded(
-          child: ListView.builder(
-            reverse: true,
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-            itemCount: _timelineEventos.length,
-            itemBuilder: (context, i) {
-              final evento = _timelineEventos[_timelineEventos.length - 1 - i];
-              final gano = evento['gano'] as bool;
-              final color = gano ? _kDorado : _kRojo;
-              final lineas = (evento['lineas'] as List).cast<String>();
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(gano ? Icons.check_circle : Icons.cancel, color: color, size: 14),
-                        const SizedBox(width: 6),
-                        Text('RONDA ${evento['ronda']} · ${gano ? 'GANADA' : 'PERDIDA'}',
-                            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.6)),
-                      ],
-                    ),
-                    for (final linea in lineas)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 20, top: 2),
-                        child: Text('•  $linea', style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                      ),
-                  ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMarcador() {
+    final nombreMapa = (_mapaActual['nombre'] ?? '').toUpperCase();
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.55),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white12),
+          ),
+          child: Column(
+            children: [
+              Text(
+                nombreMapa.isEmpty ? 'AL MEJOR DE $_rondasParaGanar RONDAS' : 'MAPA · $nombreMapa',
+                style: const TextStyle(
+                  color: Colors.white54,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.4,
                 ),
-              );
-            },
+              ),
+              const SizedBox(height: 4),
+              Text(
+                widget.etiquetaPartido.toUpperCase(),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _kDorado,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _escudoEquipo(icono: Icons.star, color: _kRojo, etiqueta: 'TÚ'),
+                  Column(
+                    children: [
+                      Text(
+                        '$_rondasUsuario  -  $_rondasRival',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 42,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _kFondoPanel,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: _kDorado.withOpacity(0.5)),
+                        ),
+                        child: Text(
+                          _rondaActual == 0 ? 'PREPARANDO' : 'RONDA $_rondaActual',
+                          style: const TextStyle(
+                            color: _kDorado,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  _escudoEquipo(icono: Icons.shield_outlined, color: Colors.white54, etiqueta: widget.nombreRival),
+                ],
+              ),
+            ],
           ),
         ),
+        Positioned(
+          top: -2,
+          left: -2,
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), bottomRight: Radius.circular(10)),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              color: _kRojo,
+              child: const Text(
+                'EN VIVO',
+                style: TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w900, letterSpacing: 1.0),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _escudoEquipo({required IconData icono, required Color color, required String etiqueta}) {
+    return Column(
+      children: [
+        Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: _kFondoPanel,
+            border: Border.all(color: color, width: 2),
+          ),
+          child: Icon(icono, color: color, size: 22),
+        ),
+        const SizedBox(height: 4),
+        SizedBox(
+          width: 64,
+          child: Text(
+            etiqueta,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.4),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLineaRondas() {
+    final total = _historialRondas.length + (_resolviendoRonda ? 1 : 0);
+    if (total == 0) return const SizedBox(height: 6);
+
+    return SizedBox(
+      height: 58,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(height: 1, color: Colors.white24),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            reverse: true,
+            child: Row(children: List.generate(total, (i) => _tickRonda(i, total))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tickRonda(int i, int total) {
+    final esActual = _resolviendoRonda && i == total - 1;
+    final bool? gano = esActual ? null : _historialRondas[i];
+
+    return SizedBox(
+      width: 26,
+      height: 58,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 16,
+            child: gano == true
+                ? const Icon(Icons.circle, color: _kDorado, size: 7)
+                : const SizedBox.shrink(),
+          ),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: esActual ? _kCian : _kFondoPanel,
+              border: Border.all(color: esActual ? _kCian : Colors.white38, width: 1.3),
+              boxShadow: esActual ? [BoxShadow(color: _kCian.withOpacity(0.7), blurRadius: 6)] : null,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text('${i + 1}', style: const TextStyle(color: Colors.white38, fontSize: 8)),
+          SizedBox(
+            height: 16,
+            child: gano == false
+                ? const Icon(Icons.circle, color: _kRojo, size: 7)
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBarraMomentum(int rachaUsuario, int rachaRival) {
+    var posicion = 0.5;
+    if (rachaUsuario >= 3) posicion = 0.85;
+    if (rachaRival >= 3) posicion = 0.15;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'MOMENTUM',
+          style: TextStyle(color: Colors.white38, fontSize: 10.5, fontWeight: FontWeight.bold, letterSpacing: 1.6),
+        ),
+        const SizedBox(height: 8),
+        Stack(
+          alignment: Alignment.centerLeft,
+          children: [
+            Container(
+              height: 6,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                gradient: const LinearGradient(colors: [_kRojoOscuro, Colors.white12, _kDorado]),
+              ),
+            ),
+            AnimatedAlign(
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeOut,
+              alignment: Alignment(posicion * 2 - 1, 0),
+              child: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _kCian,
+                  boxShadow: [BoxShadow(color: _kCian.withOpacity(0.7), blurRadius: 8)],
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (rachaUsuario >= 3)
+          const Padding(
+            padding: EdgeInsets.only(top: 8.0),
+            child: Text('¡Tu equipo está en racha! +1 de impulso',
+                style: TextStyle(color: _kDorado, fontSize: 11.5, fontWeight: FontWeight.bold)),
+          )
+        else if (rachaRival >= 3)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text('${widget.nombreRival} está en racha, -1 a tu equipo',
+                style: const TextStyle(color: _kRojo, fontSize: 11.5, fontWeight: FontWeight.bold)),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPanelEvento(Map<String, dynamic>? evento) {
+    if (evento == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 34),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: const Center(
+          child: Text('El partido está por comenzar...', style: TextStyle(color: Colors.white38, fontSize: 12.5)),
+        ),
+      );
+    }
+
+    final enVivo = identical(evento, _rondaEnVivo);
+    final gano = evento['gano'] as bool? ?? false;
+    final ronda = evento['ronda'] as int;
+    final lineas = (evento['lineas'] as List).cast<String>();
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: Container(
+        key: ValueKey('$ronda-${lineas.length}-$enVivo'),
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(20, 26, 20, 22),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.55),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _kFondo,
+                border: Border.all(color: _kCian, width: 2),
+              ),
+              child: Icon(
+                enVivo ? Icons.bolt : (gano ? Icons.check : Icons.close),
+                color: _kCian,
+                size: 20,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              enVivo ? 'RONDA $ronda · EN JUEGO' : 'RONDA $ronda · ${gano ? 'GANADA' : 'PERDIDA'}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: _kCian,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                fontStyle: FontStyle.italic,
+                letterSpacing: 0.6,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (lineas.isEmpty)
+              const Text(
+                'Cargando la ronda...',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white54, fontSize: 12.5),
+              )
+            else
+              Column(
+                children: [
+                  for (final linea in lineas)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        linea,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white, fontSize: 13.5, height: 1.3),
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoInferior() {
+    final nombreMapa = _mapaActual['nombre'] ?? '';
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (nombreMapa.isNotEmpty) ...[
+          const Icon(Icons.map, color: Colors.white38, size: 13),
+          const SizedBox(width: 6),
+          Text(
+            nombreMapa,
+            style: const TextStyle(color: Colors.white38, fontWeight: FontWeight.w600, fontSize: 11.5, letterSpacing: 0.6),
+          ),
+        ],
+        if (_bonoSinergia > 0) ...[
+          const SizedBox(width: 16),
+          const Icon(Icons.auto_awesome, color: _kDorado, size: 13),
+          const SizedBox(width: 6),
+          Text(
+            'Sinergia +${_formatoBono(_bonoSinergia)}',
+            style: const TextStyle(color: _kDorado, fontWeight: FontWeight.w600, fontSize: 11.5),
+          ),
+        ],
       ],
     );
   }

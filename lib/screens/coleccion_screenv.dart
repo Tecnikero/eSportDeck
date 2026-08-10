@@ -113,7 +113,7 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
   );
 }
     } catch (e) {
-      debugPrint('Error al vender: $e');
+      //debugPrint('Error al vender: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No se pudo procesar la venta.'), backgroundColor: Colors.red),
       );
@@ -226,7 +226,7 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
         ),
       );
     } catch (e) {
-      debugPrint('Error al vender repetidas: $e');
+      //debugPrint('Error al vender repetidas: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No se pudo procesar la venta masiva.'), backgroundColor: Colors.red),

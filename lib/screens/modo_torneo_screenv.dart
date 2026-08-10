@@ -102,44 +102,127 @@ class TorneoDraftScreen extends StatefulWidget {
 
 class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
   final supabase = Supabase.instance.client;
-  late Future<List<Map<String, dynamic>>> _futureInventario;
-  final List<Map<String, dynamic>> _titulares = [];
+  final _random = Random();
+
+  bool _cargando = true;
+  String? _error;
+  List<Map<String, dynamic>> _inventario = [];
+
+  final List<Map<String, dynamic>?> _casillas = List<Map<String, dynamic>?>.filled(5, null);
+  bool _revelando = false;
+  int? _casillaEnRevelacion;
+  List<Map<String, dynamic>> _opcionesActuales = [];
+
+  List<Map<String, dynamic>> get _titulares =>
+      _casillas.whereType<Map<String, dynamic>>().toList();
 
   @override
   void initState() {
     super.initState();
-    _futureInventario = _cargarInventario();
+    _cargarInventario();
   }
 
-  Future<List<Map<String, dynamic>>> _cargarInventario() async {
+  Future<void> _cargarInventario() async {
     final userId = supabase.auth.currentUser?.id;
-    if (userId == null) return [];
-
-    final response = await supabase
-        .from('inventario')
-        .select('id, cantidad, jugadores(*)')
-        .eq('user_id', userId);
-
-    final List<Map<String, dynamic>> misCartas = [];
-    for (final fila in (response as List)) {
-      final jugadorData = fila['jugadores'];
-      if (jugadorData != null) {
-        misCartas.add(Map<String, dynamic>.from(jugadorData));
-      }
+    if (userId == null) {
+      setState(() {
+        _cargando = false;
+        _error = 'No se pudo identificar tu usuario.';
+      });
+      return;
     }
-    misCartas.sort((a, b) => ((b['ovr'] ?? 0) as num).compareTo((a['ovr'] ?? 0) as num));
-    return misCartas;
+
+    try {
+      final response = await supabase
+          .from('inventario')
+          .select('id, cantidad, jugadores(*)')
+          .eq('user_id', userId);
+
+      final List<Map<String, dynamic>> misCartas = [];
+      for (final fila in (response as List)) {
+        final jugadorData = fila['jugadores'];
+        if (jugadorData != null) {
+          misCartas.add(Map<String, dynamic>.from(jugadorData));
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _inventario = misCartas;
+        _cargando = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _cargando = false;
+        _error = 'No se pudo cargar tu colección. Intenta de nuevo.';
+      });
+    }
   }
 
-  void _alternar(Map<String, dynamic> carta) {
+  Future<void> _abrirCasilla(int index) async {
+    if (_casillas[index] != null || _revelando) return;
+
+    if (_inventario.isEmpty) {
+      setState(() => _error = 'No tienes cartas en tu colección todavía.');
+      return;
+    }
+
     setState(() {
-      final yaEsta = _titulares.any((c) => c['id'] == carta['id']);
-      if (yaEsta) {
-        _titulares.removeWhere((c) => c['id'] == carta['id']);
-      } else if (_titulares.length < 5) {
-        _titulares.add(carta);
-      }
+      _revelando = true;
+      _casillaEnRevelacion = index;
+      _error = null;
     });
+
+    final idsEnEquipo = _titulares.map((c) => c['id']).toSet();
+    final pool = _inventario.where((c) => !idsEnEquipo.contains(c['id'])).toList();
+
+    if (pool.length < 4) {
+      setState(() {
+        _revelando = false;
+        _casillaEnRevelacion = null;
+        _error = 'No tienes suficientes cartas distintas en tu colección.';
+      });
+      return;
+    }
+
+    pool.shuffle(_random);
+    final opciones = pool.take(4).toList();
+
+    await Future.delayed(const Duration(milliseconds: 420));
+    if (!mounted) return;
+    setState(() {
+      _opcionesActuales = opciones;
+      _revelando = false;
+    });
+
+    if (!mounted) return;
+    await _mostrarSelectorCartas(index);
+  }
+
+  Future<void> _mostrarSelectorCartas(int index) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (context) {
+        return _SelectorCartasTorneoSheet(
+          opciones: _opcionesActuales,
+          onElegir: (carta) => _elegirCarta(index, carta),
+        );
+      },
+    );
+  }
+
+  void _elegirCarta(int index, Map<String, dynamic> carta) {
+    setState(() {
+      _casillas[index] = carta;
+      _casillaEnRevelacion = null;
+      _opcionesActuales = [];
+    });
+    Navigator.of(context).pop();
   }
 
   void _confirmar() {
@@ -154,6 +237,7 @@ class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final equipoCompleto = _titulares.length == 5;
     return Scaffold(
       backgroundColor: _kFondo,
       appBar: AppBar(
@@ -167,107 +251,227 @@ class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
-              child: Row(
+        child: _cargando
+            ? const Center(child: CircularProgressIndicator(color: _kDorado))
+            : Column(
                 children: [
-                  Icon(Icons.emoji_events, color: _kDorado, size: 22),
-                  const SizedBox(width: 10),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.emoji_events, color: _kDorado, size: 22),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Toca una casilla, aparecerán 4 jugadores de tu colección y eliges uno (${_titulares.length}/5)',
+                            style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                      child: Text(_error!, style: const TextStyle(color: _kRojo), textAlign: TextAlign.center),
+                    ),
+                  const SizedBox(height: 14),
                   Expanded(
-                    child: Text(
-                      'Elige 5 titulares de tu inventario para competir en el torneo (${_titulares.length}/5)',
-                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    child: Center(
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 12,
+                        runSpacing: 16,
+                        children: List.generate(5, _buildCasilla),
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: _futureInventario,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState != ConnectionState.done) {
-                    return const Center(child: CircularProgressIndicator(color: _kDorado));
-                  }
-                  final cartas = snapshot.data ?? [];
-                  if (cartas.isEmpty) {
-                    return const Center(
-                      child: Text('No tienes cartas en tu colección todavía.',
-                          style: TextStyle(color: Colors.white54)),
-                    );
-                  }
-                  return GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 140),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.62,
-                    ),
-                    itemCount: cartas.length,
-                    itemBuilder: (context, index) {
-                      final carta = cartas[index];
-                      final elegido = _titulares.any((c) => c['id'] == carta['id']);
-                      return GestureDetector(
-                        onTap: () => _alternar(carta),
-                        child: Stack(
-                          children: [
-                            Opacity(
-                              opacity: (!elegido && _titulares.length >= 5) ? 0.35 : 1.0,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: elegido ? _kDorado : Colors.white12,
-                                    width: elegido ? 2.5 : 1,
-                                  ),
-                                  boxShadow: elegido
-                                      ? [BoxShadow(color: _kDorado.withOpacity(0.4), blurRadius: 14)]
-                                      : [],
-                                ),
-                                padding: const EdgeInsets.all(6),
-                                child: CartaWidget(jugador: carta, width: 160, mostrarStats: false),
-                              ),
-                            ),
-                            if (elegido)
-                              Positioned(
-                                top: 4,
-                                right: 4,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(color: _kDorado, shape: BoxShape.circle),
-                                  child: const Icon(Icons.check, color: Colors.black, size: 16),
-                                ),
-                              ),
-                          ],
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _titulares.length == 5 ? _kRojo : Colors.white12,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      bottomNavigationBar: _cargando
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: equipoCompleto ? _kRojo : Colors.white12,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: equipoCompleto ? _confirmar : null,
+                    child: Text(
+                      equipoCompleto ? 'CONFIRMAR TITULARES' : 'FALTAN ${5 - _titulares.length}',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15),
+                    ),
+                  ),
+                ),
               ),
-              onPressed: _titulares.length == 5 ? _confirmar : null,
-              child: Text(
-                _titulares.length == 5 ? 'CONFIRMAR TITULARES' : 'FALTAN ${5 - _titulares.length}',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15),
+            ),
+    );
+  }
+
+  Widget _buildCasilla(int index) {
+    final carta = _casillas[index];
+    final estaRevelando = _revelando && _casillaEnRevelacion == index;
+
+    return SizedBox(
+      width: 100,
+      child: GestureDetector(
+        onTap: carta == null ? () => _abrirCasilla(index) : null,
+        child: carta != null
+            ? Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [BoxShadow(color: _kDorado.withOpacity(0.35), blurRadius: 8)],
+                ),
+                child: CartaWidget(jugador: carta, width: 100),
+              )
+            : AspectRatio(
+                aspectRatio: 626 / 794,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: _kFondoPanel,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white12, width: 1.5),
+                  ),
+                  child: Center(
+                    child: estaRevelando
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(color: _kRojo, strokeWidth: 2),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _kRojo.withOpacity(0.12),
+                                  border: Border.all(color: _kRojo.withOpacity(0.5)),
+                                ),
+                                child: Icon(Icons.add, color: _kRojo.withOpacity(0.9), size: 20),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Jugador ${index + 1}',
+                                style: const TextStyle(color: Colors.white38, fontWeight: FontWeight.w600, fontSize: 10.5),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
               ),
+      ),
+    );
+  }
+}
+
+class _SelectorCartasTorneoSheet extends StatefulWidget {
+  final List<Map<String, dynamic>> opciones;
+  final void Function(Map<String, dynamic>) onElegir;
+
+  const _SelectorCartasTorneoSheet({
+    required this.opciones,
+    required this.onElegir,
+  });
+
+  @override
+  State<_SelectorCartasTorneoSheet> createState() => _SelectorCartasTorneoSheetState();
+}
+
+class _SelectorCartasTorneoSheetState extends State<_SelectorCartasTorneoSheet> {
+  final List<bool> _visibles = [false, false, false, false];
+
+  @override
+  void initState() {
+    super.initState();
+    for (var i = 0; i < _visibles.length; i++) {
+      Future.delayed(Duration(milliseconds: 160 * i), () {
+        if (!mounted) return;
+        setState(() => _visibles[i] = true);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final anchoDisponible = MediaQuery.of(context).size.width - 32;
+    final anchoTarjeta = (anchoDisponible - 12) / 2;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        16, 20, 16, 30 + MediaQuery.of(context).padding.bottom,
+      ),
+      decoration: BoxDecoration(
+        color: _kFondoPanel,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border.all(color: _kRojo, width: 1.5),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.emoji_events, color: _kRojo, size: 28),
+          const SizedBox(height: 6),
+          const Text(
+            'ELIGE TU JUGADOR',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.2),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Toca una carta para agregarla a tu equipo',
+            style: TextStyle(color: Colors.white54, fontSize: 12),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _opcionCarta(0, anchoTarjeta),
+              _opcionCarta(1, anchoTarjeta),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _opcionCarta(2, anchoTarjeta),
+              _opcionCarta(3, anchoTarjeta),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _opcionCarta(int index, double ancho) {
+    final carta = widget.opciones[index];
+    final visible = _visibles[index];
+
+    return AnimatedOpacity(
+      opacity: visible ? 1 : 0,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOut,
+      child: AnimatedSlide(
+        offset: visible ? Offset.zero : const Offset(0, 0.18),
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOut,
+        child: GestureDetector(
+          onTap: visible ? () => widget.onElegir(carta) : null,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _kRojo.withOpacity(0.5), width: 1.5),
+            ),
+            child: SizedBox(
+              width: ancho,
+              child: CartaWidget(jugador: carta, width: ancho),
             ),
           ),
         ),
@@ -366,7 +570,7 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
 
       setState(() => _cargando = false);
     } catch (e) {
-      debugPrint('ERROR AL PREPARAR TORNEO: $e');
+      //debugPrint('ERROR AL PREPARAR TORNEO: $e');
       setState(() {
         _cargando = false;
         _error = 'No se pudo armar el torneo. Intenta de nuevo.';
@@ -506,6 +710,11 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
     partido.ganador = ganador;
     partido.perdedor = perdedor;
 
+    if (ganador.esUsuario) {
+      if (!mounted) return;
+      await context.read<PerfilProvider>().agregarSobrePendiente('plata');
+    }
+
     final eraSegundaDerrota = _perdioUnaVez.contains(perdedor);
     if (partido.id == 'GF') {
     } else if (eraSegundaDerrota) {
@@ -545,7 +754,7 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
     try {
       await supabase.rpc('fn_pagar_monedas_partida', params: {'p_cantidad': _premioMonedas});
     } catch (e) {
-      debugPrint('ERROR AL PAGAR MONEDAS DE TORNEO: $e');
+      //debugPrint('ERROR AL PAGAR MONEDAS DE TORNEO: $e');
       errorMonedas = e.toString();
     }
 

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/carta_widget.dart';
+import '../widgets/carta_mini_widget.dart';
 
 const List<String> _rolesPrincipales = ['DUE', 'INI', 'CON', 'CEN'];
 
@@ -13,6 +14,14 @@ const Color _kRojoOscuro = Color(0xFF7A0000);
 const Color _kDorado = Color(0xFFFFD700);
 const Color _kTextoSuave = Color(0xFFB9B4B4);
 const Color _kBorde = Color(0x33FFFFFF);
+const Color _kCian = Color(0xFF29E0E0);
+
+const List<double> _kMatrizGrisEvento = <double>[
+  0.2126, 0.7152, 0.0722, 0, 0,
+  0.2126, 0.7152, 0.0722, 0, 0,
+  0.2126, 0.7152, 0.0722, 0, 0,
+  0, 0, 0, 1, 0,
+];
 
 class _Tarjeta extends StatelessWidget {
   final Widget child;
@@ -257,7 +266,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
       if (!mounted) return;
       await _mostrarSelectorCartas(index);
     } catch (e) {
-      debugPrint('ERROR AL REVELAR CASILLA: $e');
       if (!mounted) return;
       setState(() {
         _revelando = false;
@@ -471,23 +479,47 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
 
         final equipoGanador = ganeLaRonda ? _seleccionados : _rosterRival;
         final equipoPerdedor = ganeLaRonda ? _rosterRival : _seleccionados;
-        final heroe = '${equipoGanador[_random.nextInt(equipoGanador.length)]['nombre'] ?? 'Jugador'}';
-        final caido = '${equipoPerdedor[_random.nextInt(equipoPerdedor.length)]['nombre'] ?? 'Rival'}';
+        final heroeCarta = equipoGanador[_random.nextInt(equipoGanador.length)];
+        final caidoCarta = equipoPerdedor[_random.nextInt(equipoPerdedor.length)];
+        final heroe = '${heroeCarta['nombre'] ?? 'Jugador'}';
+        final caido = '${caidoCarta['nombre'] ?? 'Rival'}';
         final lineaHeroe =
             _eventosPositivos[_random.nextInt(_eventosPositivos.length)].replaceAll('{jugador}', heroe);
         final lineaCaido =
             _eventosNegativos[_random.nextInt(_eventosNegativos.length)].replaceAll('{jugador}', caido);
 
+        setState(() {
+          _rondaEnVivo = {
+            'ronda': numeroRonda,
+            'gano': ganeLaRonda,
+            'heroeCarta': heroeCarta,
+            'caidoCarta': null,
+            'lineas': <String>[],
+          };
+        });
+
         await Future.delayed(const Duration(milliseconds: 700));
         if (!mounted) return;
         setState(() {
-          _rondaEnVivo = {'ronda': numeroRonda, 'lineas': [lineaHeroe]};
+          _rondaEnVivo = {
+            'ronda': numeroRonda,
+            'gano': ganeLaRonda,
+            'heroeCarta': heroeCarta,
+            'caidoCarta': caidoCarta,
+            'lineas': [lineaHeroe],
+          };
         });
 
         await Future.delayed(const Duration(milliseconds: 900));
         if (!mounted) return;
         setState(() {
-          _rondaEnVivo = {'ronda': numeroRonda, 'lineas': [lineaHeroe, lineaCaido]};
+          _rondaEnVivo = {
+            'ronda': numeroRonda,
+            'gano': ganeLaRonda,
+            'heroeCarta': heroeCarta,
+            'caidoCarta': caidoCarta,
+            'lineas': [lineaHeroe, lineaCaido],
+          };
         });
 
         await Future.delayed(const Duration(milliseconds: 700));
@@ -500,6 +532,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
           _timelineEventos.add({
             'ronda': numeroRonda,
             'gano': ganeLaRonda,
+            'heroeCarta': heroeCarta,
+            'caidoCarta': caidoCarta,
             'lineas': [lineaHeroe, lineaCaido],
           });
           if (ganeLaRonda) {
@@ -533,7 +567,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
         _fase = _FaseJuego.resultado;
       });
     } catch (e) {
-      debugPrint('ERROR EN PARTIDA RÁPIDA: $e');
       if (!mounted) return;
       setState(() {
         _error = 'No se pudo completar la partida.';
@@ -547,8 +580,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
   if (userId == null) return;
   try {
     await supabase.rpc('fn_pagar_monedas_partida', params: {'p_cantidad': cantidad});
-  } catch (e) {
-    debugPrint('ERROR AL PAGAR MONEDAS DE PARTIDA: $e');
+    } catch (e) {
+      //debugPrint('ERROR AL PAGAR MONEDAS DE PARTIDA: $e');
   }
 }
 
@@ -1054,36 +1087,23 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
   }
 
   Widget _buildSimulando() {
+    final rachaJugador = _rachaActual(true);
+    final rachaRival = _rachaActual(false);
+    final Map<String, dynamic>? ultimoEvento =
+        _rondaEnVivo ?? (_timelineEventos.isNotEmpty ? _timelineEventos.last : null);
+
     return Stack(
       fit: StackFit.expand,
       children: [
         Container(color: _kFondo),
         if (_mapaActual != null)
           Positioned.fill(
-            child: Center(
-              child: SizedBox(
-                width: MediaQuery.of(context).size.width * 0.94,
-                child: ShaderMask(
-                  blendMode: BlendMode.dstIn,
-                  shaderCallback: (rect) {
-                    return const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.white,
-                        Colors.white,
-                        Colors.transparent,
-                      ],
-                      stops: [0.0, 0.1, 0.9, 1.0],
-                    ).createShader(rect);
-                  },
-                  child: Image.asset(
-                    _mapaActual!['imagen']!,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-                  ),
-                ),
+            child: Opacity(
+              opacity: 0.62,
+              child: Image.asset(
+                _mapaActual!['imagen']!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
               ),
             ),
           ),
@@ -1092,80 +1112,25 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                _kFondo.withOpacity(0.35),
-                _kFondo.withOpacity(0.55),
-                _kFondo.withOpacity(0.35),
-              ],
+              colors: [_kFondo.withOpacity(0.35), _kFondo.withOpacity(0.5), _kFondo.withOpacity(0.35)],
             ),
           ),
         ),
         Positioned.fill(
-          child: Center(
+          child: SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 18),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _Tarjeta(
-                    borde: _kRojoOscuro,
-                    child: Column(
-                      children: [
-                        if (_mapaActual != null)
-                          Text(
-                            _mapaActual!['nombre']!.toUpperCase(),
-                            style: const TextStyle(color: Colors.white38, fontSize: 11.5, letterSpacing: 1.5),
-                          ),
-                        const SizedBox(height: 10),
-                        Text(
-                          '$_rondasJugador — $_rondasIA',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 52,
-                            fontWeight: FontWeight.w900,
-                            shadows: [Shadow(color: Colors.black, blurRadius: 12)],
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Gana quien llegue primero a $_rondasParaGanar rondas',
-                          style: const TextStyle(color: Colors.white38, fontSize: 11.5),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          _rondaActual == 0 ? 'Preparando la partida...' : 'Ronda $_rondaActual',
-                          style: const TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w600),
-                        ),
-                        if (_bonoSinergia > 0)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
-                            child: Text(
-                              '🎯 Sinergia de agentes: +${_formatoBono(_bonoSinergia)}',
-                              style: const TextStyle(color: _kDorado, fontSize: 12, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        _buildIndicadorMomentum(),
-                        const SizedBox(height: 14),
-                        Wrap(
-                          alignment: WrapAlignment.center,
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: List.generate(_historialRondas.length + (_resolviendoRonda ? 1 : 0), (i) {
-                            Color color = Colors.white38;
-                            IconData icono = Icons.hourglass_bottom;
-                            if (i < _historialRondas.length) {
-                              final gane = _historialRondas[i];
-                              color = gane ? _kDorado : _kRojo;
-                              icono = gane ? Icons.check_circle : Icons.cancel;
-                            }
-                            return Icon(icono, color: color, size: 20);
-                          }),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  _buildTimeline(),
+                  _buildMarcador(),
+                  const SizedBox(height: 10),
+                  _buildLineaRondas(),
+                  const SizedBox(height: 16),
+                  _buildBarraMomentum(rachaJugador, rachaRival),
+                  const SizedBox(height: 16),
+                  _buildPanelEvento(ultimoEvento),
+                  const SizedBox(height: 14),
+                  _buildInfoInferior(),
                 ],
               ),
             ),
@@ -1175,179 +1140,417 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     );
   }
 
-  Widget _buildIndicadorMomentum() {
-    final rachaJugador = _rachaActual(true);
-    final rachaRival = _rachaActual(false);
-    if (rachaJugador >= 3) {
-      return const Padding(
-        padding: EdgeInsets.only(top: 6.0),
-        child: Text('¡EN RACHA! +1 de impulso', style: TextStyle(color: _kDorado, fontSize: 12, fontWeight: FontWeight.bold)),
-      );
-    }
-    if (rachaRival >= 3) {
-      return const Padding(
-        padding: EdgeInsets.only(top: 6.0),
-        child: Text('La IA está en racha, -1 a tu equipo', style: TextStyle(color: _kRojo, fontSize: 12, fontWeight: FontWeight.bold)),
-      );
-    }
-    return const SizedBox.shrink();
-  }
-
-  Widget _buildTimeline() {
-    final rondaEnVivo = _rondaEnVivo;
-
-    if (_timelineEventos.isEmpty && rondaEnVivo == null) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 18),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.32),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white24),
-        ),
-        child: const Center(
-          child: Text(
-            'La partida está por comenzar...',
-            style: TextStyle(color: Colors.white38, fontSize: 12.5),
+  Widget _buildMarcador() {
+    final nombreMapa = _mapaActual?['nombre']?.toUpperCase() ?? '';
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.55),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white12),
+          ),
+          child: Column(
+            children: [
+              Text(
+                nombreMapa.isEmpty ? 'AL MEJOR DE $_rondasParaGanar RONDAS' : 'MAPA · $nombreMapa',
+                style: const TextStyle(
+                  color: Colors.white54,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.4,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _escudoEquipo(icono: Icons.shield, color: _kRojo, etiqueta: 'TÚ'),
+                  Column(
+                    children: [
+                      Text(
+                        '$_rondasJugador  -  $_rondasIA',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 42,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _kFondoPanel,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: _kDorado.withOpacity(0.5)),
+                        ),
+                        child: Text(
+                          _rondaActual == 0 ? 'PREPARANDO' : 'RONDA $_rondaActual',
+                          style: const TextStyle(
+                            color: _kDorado,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  _escudoEquipo(icono: Icons.smart_toy, color: Colors.white54, etiqueta: 'IA'),
+                ],
+              ),
+            ],
           ),
         ),
-      );
-    }
-
-    final entradas = _timelineEventos.reversed.toList();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      constraints: const BoxConstraints(maxHeight: 260),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.35),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white24),
-      ),
-      child: ListView(
-        shrinkWrap: true,
-        physics: const ClampingScrollPhysics(),
-        children: [
-          if (rondaEnVivo != null) ...[
-            _buildEntradaEnVivo(rondaEnVivo),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Divider(height: 1, color: Colors.white12),
-            ),
-          ],
-          for (var i = 0; i < entradas.length; i++) ...[
-            _buildEntradaResuelta(entradas[i]),
-            if (i != entradas.length - 1)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
-                child: Divider(height: 1, color: Colors.white12),
+        Positioned(
+          top: -2,
+          left: -2,
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), bottomRight: Radius.circular(10)),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              color: _kRojo,
+              child: const Text(
+                'EN VIVO',
+                style: TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w900, letterSpacing: 1.0),
               ),
-          ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _escudoEquipo({required IconData icono, required Color color, required String etiqueta}) {
+    return Column(
+      children: [
+        Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: _kFondoPanel,
+            border: Border.all(color: color, width: 2),
+          ),
+          child: Icon(icono, color: color, size: 22),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          etiqueta,
+          style: const TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.6),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLineaRondas() {
+    final total = _historialRondas.length + (_resolviendoRonda ? 1 : 0);
+    if (total == 0) return const SizedBox(height: 6);
+
+    return SizedBox(
+      height: 58,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(height: 1, color: Colors.white24),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            reverse: true,
+            child: Row(children: List.generate(total, (i) => _tickRonda(i, total))),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildEntradaEnVivo(Map<String, dynamic> evento) {
-    final ronda = evento['ronda'] as int;
-    final lineas = (evento['lineas'] as List).cast<String>();
+  Widget _tickRonda(int i, int total) {
+    final esActual = _resolviendoRonda && i == total - 1;
+    final bool? gano = esActual ? null : _historialRondas[i];
+
+    return SizedBox(
+      width: 32,
+      height: 58,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 16,
+            child: gano == true
+                ? const Icon(Icons.circle, color: _kDorado, size: 8)
+                : const SizedBox.shrink(),
+          ),
+          Container(
+            width: 9,
+            height: 9,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: esActual ? _kCian : _kFondoPanel,
+              border: Border.all(color: esActual ? _kCian : Colors.white38, width: 1.4),
+              boxShadow: esActual ? [BoxShadow(color: _kCian.withOpacity(0.7), blurRadius: 6)] : null,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text('${i + 1}', style: const TextStyle(color: Colors.white38, fontSize: 8.5)),
+          SizedBox(
+            height: 16,
+            child: gano == false
+                ? const Icon(Icons.circle, color: _kRojo, size: 8)
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBarraMomentum(int rachaJugador, int rachaRival) {
+    var posicion = 0.5;
+    if (rachaJugador >= 3) posicion = 0.85;
+    if (rachaRival >= 3) posicion = 0.15;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        const Text(
+          'MOMENTUM',
+          style: TextStyle(color: Colors.white38, fontSize: 10.5, fontWeight: FontWeight.bold, letterSpacing: 1.6),
+        ),
+        const SizedBox(height: 8),
+        Stack(
+          alignment: Alignment.centerLeft,
           children: [
-            const SizedBox(
-              width: 12,
-              height: 12,
-              child: CircularProgressIndicator(color: _kDorado, strokeWidth: 1.6),
+            Container(
+              height: 6,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                gradient: const LinearGradient(colors: [_kRojoOscuro, Colors.white12, _kDorado]),
+              ),
             ),
-            const SizedBox(width: 8),
-            Text(
-              'RONDA $ronda · EN JUEGO',
-              style: const TextStyle(
-                color: _kDorado,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.6,
+            AnimatedAlign(
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeOut,
+              alignment: Alignment(posicion * 2 - 1, 0),
+              child: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _kCian,
+                  boxShadow: [BoxShadow(color: _kCian.withOpacity(0.7), blurRadius: 8)],
+                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 5),
-        if (lineas.isEmpty)
+        if (rachaJugador >= 3)
           const Padding(
-            padding: EdgeInsets.only(left: 20, top: 2),
-            child: Text('•  ...', style: TextStyle(color: Colors.white38, fontSize: 12.5)),
+            padding: EdgeInsets.only(top: 8.0),
+            child: Text('¡Tu equipo está en racha! +1 de impulso',
+                style: TextStyle(color: _kDorado, fontSize: 11.5, fontWeight: FontWeight.bold)),
           )
-        else
-          for (final linea in lineas) _lineaAnimada(linea, key: ValueKey('$ronda-$linea')),
+        else if (rachaRival >= 3)
+          const Padding(
+            padding: EdgeInsets.only(top: 8.0),
+            child: Text('La IA está en racha, -1 a tu equipo',
+                style: TextStyle(color: _kRojo, fontSize: 11.5, fontWeight: FontWeight.bold)),
+          ),
       ],
     );
   }
 
-  Widget _lineaAnimada(String texto, {Key? key}) {
-    return TweenAnimationBuilder<double>(
-      key: key,
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeOut,
-      builder: (context, valor, child) {
-        return Opacity(
-          opacity: valor,
-          child: Transform.translate(
-            offset: Offset(0, (1 - valor) * 6),
-            child: child,
-          ),
-        );
-      },
-      child: Padding(
-        padding: const EdgeInsets.only(left: 20, top: 2),
-        child: Text(
-          '•  $texto',
-          style: const TextStyle(color: Colors.white70, fontSize: 12.5),
+  Widget _buildPanelEvento(Map<String, dynamic>? evento) {
+    if (evento == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 34),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: const Center(
+          child: Text('La partida está por comenzar...', style: TextStyle(color: Colors.white38, fontSize: 12.5)),
+        ),
+      );
+    }
+
+    final enVivo = identical(evento, _rondaEnVivo);
+    final gano = evento['gano'] as bool;
+    final ronda = evento['ronda'] as int;
+    final lineas = (evento['lineas'] as List).cast<String>();
+    final heroeCarta = evento['heroeCarta'] as Map<String, dynamic>?;
+    final caidoCarta = evento['caidoCarta'] as Map<String, dynamic>?;
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: Container(
+        key: ValueKey('$ronda-${lineas.length}-$enVivo'),
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(20, 26, 20, 22),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.55),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _kFondo,
+                border: Border.all(color: _kCian, width: 2),
+              ),
+              child: Icon(
+                enVivo ? Icons.bolt : (gano ? Icons.check : Icons.close),
+                color: _kCian,
+                size: 20,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              enVivo ? 'RONDA $ronda · EN JUEGO' : 'RONDA $ronda · ${gano ? 'GANADA' : 'PERDIDA'}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: _kCian,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                fontStyle: FontStyle.italic,
+                letterSpacing: 0.6,
+              ),
+            ),
+            if (heroeCarta != null) ...[
+              const SizedBox(height: 16),
+              _buildDueloCartas(heroeCarta, caidoCarta, gano),
+            ],
+            const SizedBox(height: 12),
+            if (lineas.isEmpty)
+              const Text(
+                'Cargando la ronda...',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white54, fontSize: 12.5),
+              )
+            else
+              Column(
+                children: [
+                  for (final linea in lineas)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        linea,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white, fontSize: 13.5, height: 1.3),
+                      ),
+                    ),
+                ],
+              ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildEntradaResuelta(Map<String, dynamic> evento) {
-    final gano = evento['gano'] as bool;
-    final ronda = evento['ronda'] as int;
-    final lineas = (evento['lineas'] as List).cast<String>();
-    final color = gano ? _kDorado : _kRojo;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildDueloCartas(
+    Map<String, dynamic> heroeCarta,
+    Map<String, dynamic>? caidoCarta,
+    bool gano,
+  ) {
+    final colorAccion = gano ? _kDorado : _kRojo;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Row(
-          children: [
-            Icon(gano ? Icons.check_circle : Icons.cancel, color: color, size: 14),
-            const SizedBox(width: 6),
-            Text(
-              'RONDA $ronda · ${gano ? 'GANADA' : 'PERDIDA'}',
-              style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.6,
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [BoxShadow(color: colorAccion.withOpacity(0.45), blurRadius: 10)],
+          ),
+          child: SizedBox(
+            width: 76,
+            child: AspectRatio(
+              aspectRatio: 626 / 794,
+              child: CartaMiniWidget(jugador: heroeCarta),
+            ),
+          ),
+        ),
+        SizedBox(
+          width: 46,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.bolt, color: colorAccion, size: 20),
+              Icon(Icons.arrow_forward, color: colorAccion, size: 16),
+              const SizedBox(height: 2),
+              Text(
+                'MATÓ',
+                style: TextStyle(color: colorAccion, fontSize: 9.5, fontWeight: FontWeight.w900, letterSpacing: 0.8),
+              ),
+            ],
+          ),
+        ),
+        if (caidoCarta != null)
+          Opacity(
+            opacity: 0.55,
+            child: ColorFiltered(
+              colorFilter: const ColorFilter.matrix(_kMatrizGrisEvento),
+              child: SizedBox(
+                width: 76,
+                child: AspectRatio(
+                  aspectRatio: 626 / 794,
+                  child: CartaMiniWidget(jugador: caidoCarta),
+                ),
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 5),
-        for (final linea in lineas)
-          Padding(
-            padding: const EdgeInsets.only(left: 20, top: 2),
-            child: Text(
-              '•  $linea',
-              style: const TextStyle(color: Colors.white70, fontSize: 12.5),
+          )
+        else
+          SizedBox(
+            width: 76,
+            child: AspectRatio(
+              aspectRatio: 626 / 794,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: _kFondoPanel,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: const Icon(Icons.question_mark, color: Colors.white24, size: 20),
+              ),
             ),
           ),
       ],
     );
   }
+
+  Widget _buildInfoInferior() {
+    final nombreMapa = _mapaActual?['nombre']?.toUpperCase() ?? '';
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (nombreMapa.isNotEmpty) ...[
+          const Icon(Icons.map_outlined, color: Colors.white38, size: 13),
+          const SizedBox(width: 6),
+          Text(
+            nombreMapa,
+            style: const TextStyle(color: Colors.white38, fontWeight: FontWeight.w600, fontSize: 11.5, letterSpacing: 0.6),
+          ),
+        ],
+        if (_bonoSinergia > 0) ...[
+          const SizedBox(width: 16),
+          const Icon(Icons.auto_awesome, color: _kDorado, size: 13),
+          const SizedBox(width: 6),
+          Text(
+            'Sinergia +${_formatoBono(_bonoSinergia)}',
+            style: const TextStyle(color: _kDorado, fontWeight: FontWeight.w600, fontSize: 11.5),
+          ),
+        ],
+      ],
+    );
+  }
+
 
   Widget _buildResultado() {
     final color = _victoria ? _kDorado : _kRojo;
@@ -1425,7 +1628,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
   }
 }
 
-class _SelectorCartasSheet extends StatelessWidget {
+class _SelectorCartasSheet extends StatefulWidget {
   final List<Map<String, dynamic>> opciones;
   final void Function(Map<String, dynamic>) onElegir;
   final int Function(Map<String, dynamic>) quimicaPreview;
@@ -1435,6 +1638,24 @@ class _SelectorCartasSheet extends StatelessWidget {
     required this.onElegir,
     required this.quimicaPreview,
   });
+
+  @override
+  State<_SelectorCartasSheet> createState() => _SelectorCartasSheetState();
+}
+
+class _SelectorCartasSheetState extends State<_SelectorCartasSheet> {
+  final List<bool> _visibles = [false, false, false, false];
+
+  @override
+  void initState() {
+    super.initState();
+    for (var i = 0; i < _visibles.length; i++) {
+      Future.delayed(Duration(milliseconds: 160 * i), () {
+        if (!mounted) return;
+        setState(() => _visibles[i] = true);
+      });
+    }
+  }
 
   Widget _puntitos(int valor) {
     return Row(
@@ -1490,16 +1711,16 @@ class _SelectorCartasSheet extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _opcionCarta(opciones[0], anchoTarjeta),
-              _opcionCarta(opciones[1], anchoTarjeta),
+              _opcionCarta(0, anchoTarjeta),
+              _opcionCarta(1, anchoTarjeta),
             ],
           ),
           const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _opcionCarta(opciones[2], anchoTarjeta),
-              _opcionCarta(opciones[3], anchoTarjeta),
+              _opcionCarta(2, anchoTarjeta),
+              _opcionCarta(3, anchoTarjeta),
             ],
           ),
         ],
@@ -1507,22 +1728,41 @@ class _SelectorCartasSheet extends StatelessWidget {
     );
   }
 
-  Widget _opcionCarta(Map<String, dynamic> carta, double ancho) {
-    return GestureDetector(
-      onTap: () => onElegir(carta),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: _kRojo.withOpacity(0.5), width: 1.5),
-            ),
-            child: CartaWidget(jugador: carta, width: ancho),
+  Widget _opcionCarta(int index, double ancho) {
+    final carta = widget.opciones[index];
+    final visible = _visibles[index];
+
+    return AnimatedOpacity(
+      opacity: visible ? 1 : 0,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOut,
+      child: AnimatedSlide(
+        offset: visible ? Offset.zero : const Offset(0, 0.18),
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOut,
+        child: GestureDetector(
+          onTap: visible ? () => widget.onElegir(carta) : null,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: _kRojo.withOpacity(0.5), width: 1.5),
+                ),
+                child: SizedBox(
+                  width: ancho,
+                  child: AspectRatio(
+                    aspectRatio: 626 / 794,
+                    child: CartaMiniWidget(jugador: carta),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              _puntitos(widget.quimicaPreview(carta)),
+            ],
           ),
-          const SizedBox(height: 6),
-          _puntitos(quimicaPreview(carta)),
-        ],
+        ),
       ),
     );
   }

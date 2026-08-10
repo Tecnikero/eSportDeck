@@ -12,10 +12,16 @@ const Color _kPlataOscuro = Color(0xFF3A3D42);
 const Color _kDorado = Color(0xFFD9B65C);
 
 const List<Map<String, dynamic>> _tramosBasico = [
-  {'min': 0, 'max': 78, 'peso': 70, 'efecto': 'ninguno'},
-  {'min': 79, 'max': 85, 'peso': 24, 'efecto': 'plata'},
-  {'min': 86, 'max': 91, 'peso': 5, 'efecto': 'violeta'},
+  {'min': 79, 'max': 82, 'peso': 65, 'efecto': 'ninguno'},
+  {'min': 83, 'max': 89, 'peso': 31, 'efecto': 'plata'},
+  {'min': 90, 'max': 91, 'peso': 4, 'efecto': 'violeta'},
   {'min': 92, 'max': 99, 'peso': 1, 'efecto': 'dorado'},
+];
+const List<Map<String, dynamic>> _tramosPlata = [
+  {'min': 0, 'max': 79, 'peso': 100, 'efecto': 'ninguno'},
+  {'min': 80, 'max': 81, 'peso': 0, 'efecto': 'plata'},
+  {'min': 82, 'max': 88, 'peso': 0, 'efecto': 'violeta'},
+  {'min': 89, 'max': 99, 'peso': 0, 'efecto': 'dorado'},
 ];
 
 const List<Map<String, dynamic>> tiposSobre = [
@@ -30,7 +36,20 @@ const List<Map<String, dynamic>> tiposSobre = [
     'rarezas': ['Normal'],
     'tramos': _tramosBasico,
     'garantia': false,
-    'descripcion': '2 cartas aleatorias del catálogo.\nComún 70% · Rara 24% · Épica 5% · Legendaria 1%.',
+    'descripcion': '2 cartas aleatorias de oro del catálogo.',
+  },
+  {
+    'id': 'plata',
+    'nombre': 'Sobre Plata',
+    'precio': 500,
+    'cantidad_cartas': 2,
+    'icono': Icons.style_outlined,
+    'imagen': 'assets/valorant/sobres/sobre_plata.png',
+    'color': Color(0xFF4A90D9),
+    'rarezas': ['Normal'],
+    'tramos': _tramosPlata,
+    'garantia': false,
+    'descripcion': '2 cartas aleatorias de plata del catálogo.',
   },
 ];
 
@@ -41,6 +60,11 @@ const List<Map<String, dynamic>> _tramosPremium = [
   {'min': 92, 'max': 99, 'peso': 7, 'efecto': 'dorado'},
 ];
 
+final Map<String, Map<String, dynamic>> _todosLosSobres = {
+  for (final s in tiposSobre) s['id'] as String: s,
+  ...sobresGanables,
+};
+
 const Map<String, Map<String, dynamic>> sobresGanables = {
   'premium_torneo': {
     'id': 'premium_torneo',
@@ -48,8 +72,8 @@ const Map<String, Map<String, dynamic>> sobresGanables = {
     'precio': 0,
     'cantidad_cartas': 3,
     'icono': Icons.emoji_events,
-    'imagen': 'assets/valorant/sobres/sobre-premium.png',
-    'color': Color(0xFFD9B65C),
+    'imagen': 'assets/valorant/sobres/sobre_torneo.png',
+    'color': Color(0xFF4A90D9),
     'rarezas': ['Normal', 'champions', 'finals_champions'],
     'tramos': _tramosPremium,
     'garantia': true,
@@ -65,7 +89,11 @@ class TiendaScreen extends StatefulWidget {
   State<TiendaScreen> createState() => _TiendaScreenState();
 }
 
+enum _PestanaTienda { sobres, misSobres }
+
 class _TiendaScreenState extends State<TiendaScreen> {
+  _PestanaTienda _pestana = _PestanaTienda.sobres;
+
   @override
   void initState() {
     super.initState();
@@ -113,31 +141,174 @@ class _TiendaScreenState extends State<TiendaScreen> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              _bannerRacha(),
-              _seccionSobresPendientes(),
-              const SizedBox(height: 14),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'DISPONIBLES HOY',
-                  style: TextStyle(
-                    color: Colors.white38,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
+              _barraPestanas(),
+              const SizedBox(height: 16),
               Expanded(
-                child: ListView.separated(
-                  itemCount: tiposSobre.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
-                  itemBuilder: (context, index) => _tarjetaSobre(tiposSobre[index]),
-                ),
+                child: _pestana == _PestanaTienda.sobres
+                    ? _vistaSobres()
+                    : _vistaMisSobres(),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _barraPestanas() {
+    return Row(
+      children: [
+        _tabItem('SOBRES', _PestanaTienda.sobres),
+        const SizedBox(width: 22),
+        _tabItem('MIS SOBRES', _PestanaTienda.misSobres),
+      ],
+    );
+  }
+
+  Widget _tabItem(String texto, _PestanaTienda valor) {
+    final activo = _pestana == valor;
+    return GestureDetector(
+      onTap: () => setState(() => _pestana = valor),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            texto,
+            style: TextStyle(
+              color: activo ? Colors.white : Colors.white38,
+              fontWeight: FontWeight.w900,
+              fontSize: 14,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 6),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            height: 2.5,
+            width: activo ? (texto.length * 8.0 + 4) : 0,
+            decoration: BoxDecoration(
+              color: _kDorado,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _vistaSobres() {
+    return ListView(
+      children: [
+        _bannerRacha(),
+        const SizedBox(height: 14),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'DISPONIBLES HOY',
+            style: TextStyle(
+              color: Colors.white38,
+              fontSize: 11.5,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        ...tiposSobre.map(
+          (sobre) => Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: _tarjetaSobre(sobre),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _vistaMisSobres() {
+    return Consumer<PerfilProvider>(
+      builder: (context, perfil, _) {
+        final pendientes = perfil.sobresPendientes;
+
+        if (pendientes.isEmpty) {
+          return ListView(
+            children: [
+              const SizedBox(height: 60),
+              Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.inventory_2_outlined, color: Colors.white24, size: 42),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'No tienes sobres pendientes.',
+                      style: TextStyle(color: Colors.white38, fontSize: 13),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Gánalos jugando torneos o cómpralos en la tienda.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white24, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+
+        return ListView(
+          children: pendientes.entries.map((entrada) {
+            final definicion = _todosLosSobres[entrada.key];
+            if (definicion == null) return const SizedBox.shrink();
+            final cantidad = entrada.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _tarjetaSobrePendiente(definicion, cantidad),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _tarjetaSobrePendiente(Map<String, dynamic> definicion, int cantidad) {
+    return _panelMetalico(
+      borderRadius: 18,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${definicion['nombre']}  x$cantidad',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    definicion['descripcion'] as String,
+                    style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.3),
+                  ),
+                  const SizedBox(height: 12),
+                  _botonMetalico('ABRIR', () => _abrirSobrePendiente(definicion)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 90,
+              height: 110,
+              child: Image.asset(
+                definicion['imagen'] as String,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) =>
+                    _iconoMetalico(definicion['icono'] as IconData, size: 34),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -239,62 +410,10 @@ class _TiendaScreenState extends State<TiendaScreen> {
     );
   }
 
-  Widget _seccionSobresPendientes() {
-    return Consumer<PerfilProvider>(
-      builder: (context, perfil, _) {
-        final pendientes = perfil.sobresPendientes;
-        if (pendientes.isEmpty) return const SizedBox.shrink();
-
-        return Padding(
-          padding: const EdgeInsets.only(top: 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.inventory_2, color: _kDorado, size: 16),
-                  SizedBox(width: 6),
-                  Text('MIS SOBRES',
-                      style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ...pendientes.entries.map((entrada) {
-                final definicion = sobresGanables[entrada.key];
-                if (definicion == null) return const SizedBox.shrink();
-                final cantidad = entrada.value;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _panelMetalico(
-                    borderRadius: 14,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      child: Row(
-                        children: [
-                          _iconoMetalico(definicion['icono'] as IconData, size: 20),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text('${definicion['nombre']}  x$cantidad',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13.5)),
-                          ),
-                          _botonMetalico('ABRIR', () => _abrirSobrePendiente(definicion)),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _abrirSobrePendiente(Map<String, dynamic> definicion) async {
     final resultado = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (context) => SobreDetalleScreen(sobre: definicion)),
+      MaterialPageRoute(builder: (context) => SobreDetalleScreen(sobre: definicion, esPendiente: true)),
     );
     if (resultado == true && context.mounted) {
       final perfil = context.read<PerfilProvider>();
@@ -369,7 +488,7 @@ class _TiendaScreenState extends State<TiendaScreen> {
                     style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.3),
                   ),
                   const SizedBox(height: 4),
-                  _indicadorPity(sobre['id'] as String),
+                  //_indicadorPity(sobre['id'] as String),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -409,21 +528,4 @@ class _TiendaScreenState extends State<TiendaScreen> {
     );
   }
 
-  Widget _indicadorPity(String sobreId) {
-    const epicaMax = 30;
-    return Consumer<PerfilProvider>(
-      builder: (context, perfil, _) {
-        final pityEpica = perfil.obtenerPity(sobreId, 'violeta');
-        final faltan = (epicaMax - pityEpica).clamp(0, epicaMax);
-        return Text(
-          faltan <= 2 ? '¡Épica a $faltan sobres!' : 'Épica en $faltan',
-          style: TextStyle(
-            color: faltan <= 2 ? _kDorado : Colors.white38,
-            fontSize: 10.5,
-            fontWeight: faltan <= 2 ? FontWeight.bold : FontWeight.normal,
-          ),
-        );
-      },
-    );
-  }
 }

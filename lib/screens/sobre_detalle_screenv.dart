@@ -15,7 +15,8 @@ const Color _kAcentoUI = Color(0xFFD9B65C);
 
 class SobreDetalleScreen extends StatefulWidget {
   final Map<String, dynamic> sobre;
-  const SobreDetalleScreen({super.key, required this.sobre});
+  final bool esPendiente;
+  const SobreDetalleScreen({super.key, required this.sobre, this.esPendiente = false});
 
   @override
   State<SobreDetalleScreen> createState() => _SobreDetalleScreenState();
@@ -83,6 +84,25 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   bool _aperturaMasiva = false;
   String? _error;
   List<Map<String, dynamic>> _cartasReveladas = [];
+  String _fondoOcultoRuta = 'assets/valorant/cartas/carta_normal_plata.png';
+
+  static const int _umbralOvrOroOculta = 79;
+
+  static const Map<String, String> _fondosPorRarezaOculta = {
+    'champions': 'assets/valorant/cartas/carta_champions.png',
+    'finals_champions': 'assets/valorant/cartas/carta_finals_champions.png',
+  };
+
+  String _rutaFondoParaCarta(Map<String, dynamic> jugador) {
+    final rareza = '${jugador['rareza'] ?? 'normal'}'.toLowerCase().replaceAll(' ', '_');
+    if (rareza == 'normal') {
+      final ovr = (jugador['ovr'] ?? 0) as num;
+      return ovr >= _umbralOvrOroOculta
+          ? 'assets/valorant/cartas/carta_normal_oro.png'
+          : 'assets/valorant/cartas/carta_normal_plata.png';
+    }
+    return _fondosPorRarezaOculta[rareza] ?? 'assets/valorant/cartas/carta_normal_plata.png';
+  }
 
   ui.Image? _logoImagenCruda;
 
@@ -194,6 +214,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
 
     while (tramosRestantes.isNotEmpty) {
       final pesoTotal = tramosRestantes.fold<int>(0, (s, t) => s + (t['peso'] as int));
+      if (pesoTotal <= 0) break;
       var roll = _random.nextInt(pesoTotal);
 
       Map<String, dynamic> tramoElegido = tramosRestantes.last;
@@ -278,6 +299,15 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       _comprando = true;
       _error = null;
     });
+
+    if (widget.esPendiente) {
+      if (!mounted) return;
+      setState(() {
+        _comprando = false;
+        _comprado = true;
+      });
+      return;
+    }
 
     try {
       final userId = supabase.auth.currentUser?.id;
@@ -376,7 +406,10 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
 
       final efecto = _efectoDeCarta(elegidas.first);
       if (!mounted) return;
-      setState(() => _efectoActivo = efecto);
+      setState(() {
+        _efectoActivo = efecto;
+        _fondoOcultoRuta = _rutaFondoParaCarta(elegidas.first);
+      });
 
       _efecto.duration = _duracionEfecto(efecto);
       await _efecto.forward(from: 0);
@@ -450,6 +483,10 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
 
       _aplicarPity(elegidas, pool);
       elegidas.sort(_compararJugadores);
+
+      if (elegidas.isNotEmpty) {
+        _fondoOcultoRuta = _rutaFondoParaCarta(elegidas.first);
+      }
 
       await supabase.from('profiles').update({'dinero': dineroActual - precioBulk}).eq('id', userId);
 
@@ -562,7 +599,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       if (mounted) setState(() => _logoImagenCruda = info.image);
       stream.removeListener(listener);
     }, onError: (error, stackTrace) {
-      debugPrint('No se pudo cargar el logo para la máscara: $error');
+      //debugPrint('No se pudo cargar el logo para la máscara: $error');
       stream.removeListener(listener);
     });
     stream.addListener(listener);
@@ -591,11 +628,11 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   Duration _duracionRevelado(_EfectoRareza efecto) {
     switch (efecto) {
       case _EfectoRareza.dorado:
-        return const Duration(milliseconds: 3800);
+        return const Duration(milliseconds: 6200);
       case _EfectoRareza.violeta:
-        return const Duration(milliseconds: 3300);
+        return const Duration(milliseconds: 5200);
       case _EfectoRareza.plata:
-        return const Duration(milliseconds: 2800);
+        return const Duration(milliseconds: 4400);
       case _EfectoRareza.ninguno:
         return const Duration(milliseconds: 500);
     }
@@ -608,7 +645,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
 
   String _rutaBandera(Map<String, dynamic> jugador) {
     final pais = '${jugador['pais'] ?? ''}'.trim().toLowerCase();
-    return 'assets/valorant/banderas/$pais.png';
+    return 'assets/banderas/$pais.png';
   }
 
   Color _getColorEfectoActivo() {
@@ -708,32 +745,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   }
 
   Widget _brilloComun(Color color) {
-    final t = _efecto.value;
-    if (t <= 0.0) return const SizedBox.shrink();
-    return ClipRect(
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final w = constraints.maxWidth;
-            final h = constraints.maxHeight;
-            final diagonal = sqrt(w * w + h * h);
-            return Stack(
-              children: [
-                _bandaBrillo(
-                  w: w,
-                  diagonal: diagonal,
-                  progreso: t,
-                  color: color,
-                  opacidadPico: 0.55,
-                  grosor: 0.24,
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
   Widget _bandaBrillo({
@@ -1015,7 +1027,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
           ),
           const SizedBox(height: 20),
 
-          _buildPanelPity(color),
+          //_buildPanelPity(color),
           const SizedBox(height: 12),
           _buildPanelProbabilidades(color),
 
@@ -1048,10 +1060,13 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.monetization_on, color: Color(0xFF17181B)),
+                        Icon(
+                          widget.esPendiente ? Icons.card_giftcard : Icons.monetization_on,
+                          color: const Color(0xFF17181B),
+                        ),
                         const SizedBox(width: 8),
                         Text(
-                          'ABRIR 1 (${sobre['precio']})',
+                          widget.esPendiente ? 'ABRIR' : 'ABRIR 1 (${sobre['precio']})',
                           style: const TextStyle(
                               color: Color(0xFF17181B), fontWeight: FontWeight.bold, fontSize: 16),
                         ),
@@ -1061,89 +1076,37 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: _kAcentoUI.withOpacity(0.7), width: 1.5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                ),
-                onPressed: _comprarYAbrirBulk,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.bolt, color: _kAcentoUI),
-                    const SizedBox(width: 8),
-                    Text(
-                      'ABRIR x5 ($precioBulk) · -10%',
-                      style: const TextStyle(color: _kAcentoUI, fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
-                  ],
+            if (!widget.esPendiente) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: _kAcentoUI.withOpacity(0.7), width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  ),
+                  onPressed: _comprarYAbrirBulk,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.bolt, color: _kAcentoUI),
+                      const SizedBox(width: 8),
+                      Text(
+                        'ABRIR x5 ($precioBulk) · -10%',
+                        style: const TextStyle(color: _kAcentoUI, fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ],
       ),
     );
   }
 
-  Widget _buildPanelPity(Color color) {
-    final faltanViolestas = (_pityVioletaMax - _pityVioleta).clamp(0, _pityVioletaMax);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.white.withOpacity(0.06), Colors.white.withOpacity(0.02)],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _kPlataUI.withOpacity(0.25)),
-      ),
-      child: _filaPity(
-        'Épica garantizada en',
-        faltanViolestas,
-        _pityVioleta / _pityVioletaMax,
-        const Color(0xFF9B59B6),
-      ),
-    );
-  }
-
-  Widget _filaPity(String etiqueta, int faltan, double progreso, Color color) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 3,
-          child: Text(
-            faltan == 0 ? '¡Garantizada en este sobre!' : '$etiqueta $faltan sobre${faltan == 1 ? '' : 's'}',
-            style: TextStyle(
-              color: faltan == 0 ? color : Colors.white70,
-              fontSize: 12,
-              fontWeight: faltan == 0 ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          flex: 2,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: progreso.clamp(0.0, 1.0),
-              minHeight: 7,
-              backgroundColor: Colors.white10,
-              valueColor: AlwaysStoppedAnimation(color),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildPanelProbabilidades(Color color) {
     final pesoTotal = _tramos.fold<int>(0, (s, t) => s + (t['peso'] as int));
@@ -1207,40 +1170,45 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
 
   Widget _visualAperturaSobre(Map<String, dynamic> sobre, Color color) {
     switch (_efectoActivo) {
-      case _EfectoRareza.dorado:
-        return _aperturaExplosiva(
-          sobre, color, const Color(0xFFFFD700),
-          fragmentos: 12, fuerza: 1.0,
-        );
-      case _EfectoRareza.violeta:
-        return _aperturaPartida(sobre, color);
-      case _EfectoRareza.plata:
-        return _aperturaExplosiva(
-          sobre, color, Colors.white,
-          fragmentos: 6, fuerza: 0.55,
-        );
+      
       case _EfectoRareza.ninguno:
-        return _aperturaComun(sobre, color);
+        return _aperturaDividida(sobre, color);
+
+      case _EfectoRareza.plata:
+        return _aperturaFlap(sobre, color);
+
+      case _EfectoRareza.violeta:
+        return _aperturaRasgada(sobre, color);
+
+      case _EfectoRareza.dorado:
+        return _aperturaTrizas(sobre, color, const Color(0xFFFFD700));
     }
   }
 
-  Widget _aperturaComun(Map<String, dynamic> sobre, Color color) {
-    return Opacity(
-      opacity: _opacidadSobre.value,
-      child: Transform.rotate(
-        angle: _temblor.value,
-        child: Transform.scale(
-          scale: _escalaSobre.value,
-          child: _imagenSobre(sobre, color, 320),
+  Widget _buildCartaOculta(Color color) {
+    return Container(
+      width: 210,
+      height: 296,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(color: color.withOpacity(0.4), blurRadius: 20),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Image.asset(
+          _fondoOcultoRuta,
+          fit: BoxFit.cover,
         ),
       ),
     );
   }
 
-  Widget _aperturaPartida(Map<String, dynamic> sobre, Color color) {
+  Widget _aperturaDividida(Map<String, dynamic> sobre, Color color) {
     final t = Curves.easeInCubic.transform(_rasgado.value.clamp(0.0, 1.0));
-    final desplazar = t * 210;
-    final rotar = t * 0.55;
+    final desplazar = t * 260;
+    final rotar = t * 0.30;
     final opacidad =
         (1 - ((_rasgado.value - 0.55).clamp(0.0, 0.45) / 0.45)).clamp(0.0, 1.0);
 
@@ -1251,22 +1219,23 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
         child: Stack(
           alignment: Alignment.center,
           children: [
+            _buildCartaOculta(color),
             Transform.translate(
-              offset: Offset(-desplazar, -desplazar * 0.25),
+              offset: Offset(0, -desplazar),
               child: Transform.rotate(
                 angle: -rotar,
                 child: ClipRect(
-                  clipper: _MitadSobreClipper(izquierda: true),
+                  clipper: _MitadSobreClipperHorizontal(arriba: true),
                   child: _imagenSobre(sobre, color, 320),
                 ),
               ),
             ),
             Transform.translate(
-              offset: Offset(desplazar, desplazar * 0.25),
+              offset: Offset(0, desplazar),
               child: Transform.rotate(
                 angle: rotar,
                 child: ClipRect(
-                  clipper: _MitadSobreClipper(izquierda: false),
+                  clipper: _MitadSobreClipperHorizontal(arriba: false),
                   child: _imagenSobre(sobre, color, 320),
                 ),
               ),
@@ -1277,57 +1246,134 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     );
   }
 
-  Widget _aperturaExplosiva(
-    Map<String, dynamic> sobre,
-    Color color,
-    Color colorFragmentos, {
-    required int fragmentos,
-    required double fuerza,
-  }) {
-    final t = Curves.easeOutExpo.transform(_rasgado.value.clamp(0.0, 1.0));
-    final escala = 1.0 + t * 0.5 * fuerza;
-    final opacidadSobre = (1 - (_rasgado.value * 1.4)).clamp(0.0, 1.0);
+  Widget _aperturaFlap(Map<String, dynamic> sobre, Color color) {
+    final progresoSolapa = (_rasgado.value / 0.5).clamp(0.0, 1.0);
+    final anguloSolapa = Curves.easeOutCubic.transform(progresoSolapa) * 2.4;
+    final progresoCarta = ((_rasgado.value - 0.25) / 0.6).clamp(0.0, 1.0);
+    final desplazarCarta = sin(pi * progresoCarta) * 150;
+    final opacidadCarta = Curves.easeIn.transform((progresoCarta / 0.3).clamp(0.0, 1.0));
+
+    final opacidadSobre =
+        (1 - ((_rasgado.value - 0.8).clamp(0.0, 0.2) / 0.2)).clamp(0.0, 1.0);
+
+    const double fraccionCorte = 0.20;
+
+    return Transform.rotate(
+      angle: _temblor.value * 0.4,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (progresoCarta > 0)
+            Transform.translate(
+              offset: Offset(0, -desplazarCarta),
+              child: Opacity(
+                opacity: opacidadCarta,
+                child: _buildCartaOculta(color),
+              ),
+            ),
+          Opacity(
+            opacity: opacidadSobre,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                ClipRect(
+                  clipper: _MitadSobreClipperHorizontal(arriba: false, fraccion: fraccionCorte),
+                  child: _imagenSobre(sobre, color, 320),
+                ),
+                Transform(
+                  alignment: FractionalOffset.centerLeft,
+                  transform: Matrix4.identity()
+                    ..setEntry(3, 2, 0.0025)
+                    ..rotateY(-anguloSolapa),
+                  child: ClipRect(
+                    clipper: _MitadSobreClipperHorizontal(arriba: true, fraccion: fraccionCorte),
+                    child: _imagenSobre(sobre, color, 320),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _aperturaRasgada(Map<String, dynamic> sobre, Color color) {
+    final progresoRasgado = (_rasgado.value / 0.45).clamp(0.0, 1.0);
+    final progresoSeparacion = ((_rasgado.value - 0.45) / 0.55).clamp(0.0, 1.0);
+    final separacionCurva = Curves.easeOutCubic.transform(progresoSeparacion);
+    final desplazar = separacionCurva * 190;
+    final opacidad =
+        (1 - ((_rasgado.value - 0.7).clamp(0.0, 0.3) / 0.3)).clamp(0.0, 1.0);
+
+    return Opacity(
+      opacity: opacidad,
+      child: Transform.rotate(
+        angle: _temblor.value * 0.5,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            _buildCartaOculta(color),
+            Transform.translate(
+              offset: Offset(-desplazar, 0),
+              child: ClipPath(
+                clipper: _MitadSobreClipperDentado(izquierda: true),
+                child: _imagenSobre(sobre, color, 320),
+              ),
+            ),
+            Transform.translate(
+              offset: Offset(desplazar, 0),
+              child: ClipPath(
+                clipper: _MitadSobreClipperDentado(izquierda: false),
+                child: _imagenSobre(sobre, color, 320),
+              ),
+            ),
+            if (progresoSeparacion <= 0.0)
+              IgnorePointer(
+                child: CustomPaint(
+                  size: const Size(320, 450),
+                  painter: _LineaRasgadoPainter(
+                    progreso: progresoRasgado,
+                    color: Colors.white.withOpacity(0.85),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _aperturaTrizas(Map<String, dynamic> sobre, Color color, Color colorFragmentos) {
+    final progresoEstallido = _rasgado.value.clamp(0.0, 1.0);
+    final tEstallido = Curves.easeOutCirc.transform(progresoEstallido);
+    
+    final opacidadSobre = progresoEstallido < 0.05 ? 1.0 : 0.0;
 
     return Stack(
       alignment: Alignment.center,
       children: [
-        ...List.generate(fragmentos, (i) {
-          final anguloBase = (i / fragmentos) * 2 * pi;
-          final distancia = t * (200 + (i % 3) * 30) * fuerza;
-          final giro = t * (i.isEven ? 5.0 : -5.0);
-          final tam = 30.0 - (i % 4) * 4;
-          final opacidadFrag = (1 - t).clamp(0.0, 1.0);
-          return Transform.translate(
-            offset: Offset(cos(anguloBase) * distancia, sin(anguloBase) * distancia),
-            child: Transform.rotate(
-              angle: giro,
-              child: Opacity(
-                opacity: opacidadFrag,
-                child: Container(
-                  width: tam,
-                  height: tam * 1.3,
-                  decoration: BoxDecoration(
-                    color: colorFragmentos.withOpacity(0.85),
-                    borderRadius: BorderRadius.circular(4),
-                    boxShadow: [
-                      BoxShadow(color: colorFragmentos.withOpacity(0.6), blurRadius: 12),
-                    ],
-                  ),
-                ),
+        if (progresoEstallido > 0)
+          Opacity(
+            opacity: (progresoEstallido * 4).clamp(0.0, 1.0),
+            child: _buildCartaOculta(color),
+          ),
+          
+        if (opacidadSobre > 0)
+          Opacity(
+            opacity: opacidadSobre,
+            child: _imagenSobre(sobre, color, 320),
+          ),
+          
+        if (progresoEstallido > 0 && progresoEstallido < 1.0)
+          IgnorePointer(
+            child: CustomPaint(
+              size: const Size(230, 320),
+              painter: _ParticulasPixelPainter(
+                progreso: tEstallido,
               ),
             ),
-          );
-        }),
-        Transform.rotate(
-          angle: _temblor.value + t * pi * 0.25 * fuerza,
-          child: Transform.scale(
-            scale: escala,
-            child: Opacity(
-              opacity: opacidadSobre,
-              child: _imagenSobre(sobre, color, 320),
-            ),
           ),
-        ),
       ],
     );
   }
@@ -1355,6 +1401,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                       AnimatedBuilder(
                         animation: _rasgado,
                         builder: (context, child) {
+                          if (_efectoActivo == _EfectoRareza.ninguno) return const SizedBox.shrink();
                           return Opacity(
                             opacity: _opacidadDestello.value,
                             child: Transform.scale(
@@ -1440,22 +1487,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       opacity: opacidad,
       child: Transform.scale(
         scale: escala,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.55),
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: colorGlow.withOpacity(0.9), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: colorGlow.withOpacity(0.7 * opacidad),
-                blurRadius: 40,
-                spreadRadius: 6,
-              ),
-            ],
-          ),
-          child: contenido,
-        ),
+        child: contenido,
       ),
     );
   }
@@ -1478,11 +1510,11 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     };
 
     const double inicioPais = 0.00;
-    const double inicioRegion = 0.18;
-    const double inicioEquipo = 0.36;
-    const double inicioPosicion = 0.54;
-    const double duracionEtapa = 0.18;
-    const double inicioResto = 0.72;
+    const double inicioRegion = 0.22;
+    const double inicioEquipo = 0.44;
+    const double inicioPosicion = 0.66;
+    const double duracionEtapa = 0.22;
+    const double inicioResto = 0.88;
 
     return GestureDetector(
       onTap: () {
@@ -1552,7 +1584,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 SizedBox(
-                  height: 56,
+                  height: 82,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
@@ -1561,34 +1593,18 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                           opacidad: bannerPais[0],
                           escala: bannerPais[1],
                           colorGlow: colorGlow,
-                          contenido: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 26,
-                                height: 18,
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(2),
-                                  child: Image.asset(
-                                    _rutaBandera(mejorCarta),
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) =>
-                                        Icon(Icons.flag, color: colorGlow, size: 22),
-                                  ),
-                                ),
+                          contenido: SizedBox(
+                            width: 68,
+                            height: 46,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: Image.asset(
+                                _rutaBandera(mejorCarta),
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Icon(Icons.flag, color: colorGlow, size: 38),
                               ),
-                              const SizedBox(width: 10),
-                              Text(
-                                '${mejorCarta['pais'] ?? 'País'}'.toUpperCase(),
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 15,
-                                  letterSpacing: 1.2,
-                                  shadows: [Shadow(color: colorGlow, blurRadius: 12)],
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       if (bannerRegion[0] > 0)
@@ -1596,31 +1612,15 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                           opacidad: bannerRegion[0],
                           escala: bannerRegion[1],
                           colorGlow: colorGlow,
-                          contenido: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 26,
-                                height: 26,
-                                child: Image.asset(
-                                  _rutaRegion(mejorCarta),
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Icon(Icons.public, color: colorGlow, size: 22),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                '${mejorCarta['region'] ?? 'Región'}'.toUpperCase(),
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 15,
-                                  letterSpacing: 1.2,
-                                  shadows: [Shadow(color: colorGlow, blurRadius: 12)],
-                                ),
-                              ),
-                            ],
+                          contenido: SizedBox(
+                            width: 58,
+                            height: 58,
+                            child: Image.asset(
+                              _rutaRegion(mejorCarta),
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Icon(Icons.public, color: colorGlow, size: 42),
+                            ),
                           ),
                         ),
                       if (bannerEquipo[0] > 0)
@@ -1628,31 +1628,15 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                           opacidad: bannerEquipo[0],
                           escala: bannerEquipo[1],
                           colorGlow: colorGlow,
-                          contenido: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 26,
-                                height: 26,
-                                child: Image.asset(
-                                  _rutaEquipo(mejorCarta),
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Icon(Icons.shield, color: colorGlow, size: 22),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                '${mejorCarta['equipo'] ?? 'Equipo'}'.toUpperCase(),
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 15,
-                                  letterSpacing: 1.2,
-                                  shadows: [Shadow(color: colorGlow, blurRadius: 12)],
-                                ),
-                              ),
-                            ],
+                          contenido: SizedBox(
+                            width: 58,
+                            height: 58,
+                            child: Image.asset(
+                              _rutaEquipo(mejorCarta),
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Icon(Icons.shield, color: colorGlow, size: 42),
+                            ),
                           ),
                         ),
                       if (bannerPosicion[0] > 0)
@@ -1663,14 +1647,14 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                           contenido: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.gps_fixed, color: colorGlow, size: 20),
-                              const SizedBox(width: 10),
+                              Icon(Icons.gps_fixed, color: colorGlow, size: 30),
+                              const SizedBox(width: 12),
                               Text(
                                 '${mejorCarta['posicion'] ?? 'Posición'}'.toUpperCase(),
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w900,
-                                  fontSize: 15,
+                                  fontSize: 22,
                                   letterSpacing: 1.2,
                                   shadows: [Shadow(color: colorGlow, blurRadius: 12)],
                                 ),
@@ -1837,18 +1821,161 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   }
 }
 
-class _MitadSobreClipper extends CustomClipper<Rect> {
+class _MitadSobreClipperHorizontal extends CustomClipper<Rect> {
+  final bool arriba;
+  final double fraccion;
+
+  _MitadSobreClipperHorizontal({required this.arriba, this.fraccion = 0.5});
+
+  @override
+  Rect getClip(Size size) {
+    final cutY = size.height * fraccion;
+    return arriba
+        ? Rect.fromLTWH(0, 0, size.width, cutY)
+        : Rect.fromLTWH(0, cutY, size.width, size.height - cutY);
+  }
+
+  @override
+  bool shouldReclip(covariant _MitadSobreClipperHorizontal oldClipper) =>
+      oldClipper.arriba != arriba || oldClipper.fraccion != fraccion;
+}
+
+class _MitadSobreClipperDentado extends CustomClipper<Path> {
   final bool izquierda;
-  _MitadSobreClipper({required this.izquierda});
+  final int dientes;
+  final double amplitud;
+  _MitadSobreClipperDentado({
+    required this.izquierda,
+    this.dientes = 10,
+    this.amplitud = 9,
+  });
 
   @override
-  Rect getClip(Size size) => izquierda
-      ? Rect.fromLTWH(0, 0, size.width / 2, size.height)
-      : Rect.fromLTWH(size.width / 2, 0, size.width / 2, size.height);
+  Path getClip(Size size) {
+    final path = Path();
+    final midX = size.width / 2;
+    final pasoY = size.height / dientes;
+
+    if (izquierda) {
+      path.moveTo(0, 0);
+      path.lineTo(midX, 0);
+      for (int i = 1; i <= dientes; i++) {
+        final y = pasoY * i;
+        final desfaseX = i.isOdd ? amplitud : -amplitud;
+        path.lineTo(midX + desfaseX, y);
+      }
+      path.lineTo(0, size.height);
+      path.close();
+    } else {
+      path.moveTo(size.width, 0);
+      path.lineTo(midX, 0);
+      for (int i = 1; i <= dientes; i++) {
+        final y = pasoY * i;
+        final desfaseX = i.isOdd ? amplitud : -amplitud;
+        path.lineTo(midX + desfaseX, y);
+      }
+      path.lineTo(size.width, size.height);
+      path.close();
+    }
+    return path;
+  }
 
   @override
-  bool shouldReclip(covariant _MitadSobreClipper oldClipper) =>
-      oldClipper.izquierda != izquierda;
+  bool shouldReclip(covariant _MitadSobreClipperDentado oldClipper) =>
+      oldClipper.izquierda != izquierda ||
+      oldClipper.dientes != dientes ||
+      oldClipper.amplitud != amplitud;
+}
+
+class _LineaRasgadoPainter extends CustomPainter {
+  final double progreso;
+  final Color color;
+  _LineaRasgadoPainter({required this.progreso, required this.color});
+
+  static const int _dientes = 10;
+  static const double _amplitud = 9;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (progreso <= 0) return;
+    final midX = size.width / 2;
+    final alturaVisible = size.height * progreso;
+    final pasoY = size.height / _dientes;
+
+    final path = Path()..moveTo(midX, 0);
+    for (int i = 1; i <= _dientes; i++) {
+      final y = pasoY * i;
+      if (y > alturaVisible) break;
+      final desfaseX = i.isOdd ? _amplitud : -_amplitud;
+      path.lineTo(midX + desfaseX, y);
+    }
+
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _LineaRasgadoPainter oldDelegate) =>
+      oldDelegate.progreso != progreso || oldDelegate.color != color;
+}
+
+class _ParticulasPixelPainter extends CustomPainter {
+  final double progreso;
+
+  _ParticulasPixelPainter({required this.progreso});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (progreso <= 0 || progreso >= 1) return;
+
+    final rnd = Random(42); 
+    const int cols = 15;
+    const int rows = 22;
+    final double blockW = size.width / cols;
+    final double blockH = size.height / rows;
+    final paint = Paint();
+
+    for (int i = 0; i < cols; i++) {
+      for (int j = 0; j < rows; j++) {
+        final double cx = (i + 0.5) * blockW;
+        final double cy = (j + 0.5) * blockH;
+        final double dx = cx - size.width / 2;
+        final double dy = cy - size.height / 2;
+        final double rndVx = (rnd.nextDouble() - 0.5) * 140;
+        final double rndVy = (rnd.nextDouble() - 0.5) * 140;
+        final double rndZ = rnd.nextDouble(); 
+        final double moveX = cx + (dx * progreso * 2.5) + (rndVx * progreso);
+        final double moveY = cy + (dy * progreso * 2.5) + (rndVy * progreso);
+        final double escala = (1.0 - progreso) * (1.0 + rndZ * progreso * 2.0);
+        final double opacidad = (1.0 - (progreso * 1.2)).clamp(0.0, 1.0);
+
+        if (opacidad <= 0) continue;
+
+        final rect = Rect.fromCenter(
+          center: Offset(moveX, moveY),
+          width: blockW * 1.05 * escala, 
+          height: blockH * 1.05 * escala,
+        );
+
+        final esGris = rnd.nextDouble() > 0.6;
+        paint.color = esGris
+            ? const Color(0xFF2A2A2A).withOpacity(opacidad)
+            : Colors.black.withOpacity(opacidad);
+
+        canvas.drawRect(rect, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ParticulasPixelPainter oldDelegate) {
+    return oldDelegate.progreso != progreso;
+  }
 }
 
 class _MascaraLogoPainter extends CustomPainter {
