@@ -20,8 +20,8 @@ class CartaMiniWidget extends StatelessWidget {
   static const double _nombreTop = 0.1;
 
   static const Map<String, String> _fondosPorRareza = {
-    'champions': 'assets/valorant/cartas/carta_champions_mini.png',
-    'finals_champions': 'assets/valorant/cartas/carta_finals_champions_mini.png',
+    'icono': 'assets/valorant/cartas/carta_icono_mini.png',
+    'heroe': 'assets/valorant/cartas/carta_heroe_mini.png',
   };
 
   static const String _fondoNormalOroMini = 'assets/valorant/cartas/carta_normal_oro_mini.png';
@@ -34,6 +34,20 @@ class CartaMiniWidget extends StatelessWidget {
   }
 
   bool get _tieneBandera => '${jugador['pais'] ?? ''}'.trim().isNotEmpty;
+
+  String get _rareza2 => '${jugador['rareza'] ?? 'normal'}'.toLowerCase().replaceAll(' ', '_');
+
+  bool get _esIcono => _rareza2 == 'icono';
+
+  bool get _esHeroe => _rareza2 == 'heroe';
+
+  String get _rutaLogoEquipoEspecial {
+    if (_esIcono) {
+      return 'assets/valorant/equipos/logo/icono.png';
+    }
+    final region = '${jugador['region'] ?? 'default'}'.toLowerCase();
+    return 'assets/valorant/equipos/logo/heroe_$region.png';
+  }
 
   String get _rutaFondo {
     final rareza = '${jugador['rareza'] ?? 'normal'}'.toLowerCase().replaceAll(' ', '_');
@@ -170,17 +184,25 @@ class CartaMiniWidget extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _logoWidget(
-                          imagePath: 'assets/valorant/equipos/${(jugador['region'] ?? 'default').toString().toLowerCase()}/${(jugador['equipo'] ?? 'default').toString().toLowerCase()}.png',
-                          label: '${jugador['equipo'] ?? 'Equipo'}',
-                          size: w * 0.15,
-                        ),
-                        SizedBox(width: w * 0.09),
-                        _logoWidget(
-                          imagePath: 'assets/valorant/regiones/${(jugador['region'] ?? 'default').toString().toLowerCase()}.png',
-                          label: '${jugador['region'] ?? 'Region'}',
-                          size: w * 0.15,
-                        ),
+                        (_esIcono || _esHeroe)
+                            ? _logoWidget(
+                                imagePath: _rutaLogoEquipoEspecial,
+                                label: _esIcono ? 'Icono' : 'Héroe · ${jugador['region'] ?? 'Region'}',
+                                size: w * 0.15,
+                              )
+                            : _logoWidget(
+                                imagePath: 'assets/valorant/equipos/${(jugador['region'] ?? 'default').toString().toLowerCase()}/${(jugador['equipo'] ?? 'default').toString().toLowerCase()}.png',
+                                label: '${jugador['equipo'] ?? 'Equipo'}',
+                                size: w * 0.15,
+                              ),
+                        if (!_esHeroe && !_esIcono) ...[
+                          SizedBox(width: w * 0.09),
+                          _logoWidget(
+                            imagePath: 'assets/valorant/regiones/${(jugador['region'] ?? 'default').toString().toLowerCase()}.png',
+                            label: '${jugador['region'] ?? 'Region'}',
+                            size: w * 0.15,
+                          ),
+                        ],
                         if (_tieneBandera) ...[
                           SizedBox(width: w * 0.09),
                           _banderaWidget(size: w * 0.15),

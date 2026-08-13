@@ -13,6 +13,8 @@ const Color _kPlataOscuro = Color(0xFF3A3D42);
 const List<Map<String, String>> _rarezas = [
   {'valor': 'todas', 'etiqueta': 'TODAS'},
   {'valor': 'normal', 'etiqueta': 'NORMAL'},
+  {'valor': 'icono', 'etiqueta': 'ICONO'},
+  {'valor': 'heroe', 'etiqueta': 'HEROE'},
 ];
 
 const List<double> _kMatrizGris = <double>[

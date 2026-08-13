@@ -200,6 +200,42 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     return aimB.compareTo(aimA);
   }
 
+  static const Map<String, int> _pesoPorTipoPorDefecto = {
+    'normal': 100,
+    'heroe': 30,
+    'icono': 8,
+    'champions': 15,
+    'finals_champions': 4,
+  };
+
+  Map<String, int> get _pesoPorTipo {
+    final crudo = widget.sobre['peso_tipos'];
+    if (crudo is Map) {
+      return crudo.map((k, v) => MapEntry('$k'.toLowerCase(), (v as num).toInt()));
+    }
+    return _pesoPorTipoPorDefecto;
+  }
+
+  int _pesoTipoDe(Map<String, dynamic> jugador) {
+    final tipo = '${jugador['rareza'] ?? 'normal'}'.toLowerCase().replaceAll(' ', '_');
+    return _pesoPorTipo[tipo] ?? 100;
+  }
+
+  Map<String, dynamic> _elegirPonderadoPorTipo(List<Map<String, dynamic>> candidatos) {
+    if (candidatos.length == 1) return candidatos.first;
+
+    final pesos = candidatos.map(_pesoTipoDe).toList();
+    final pesoTotal = pesos.fold<int>(0, (s, p) => s + p);
+    if (pesoTotal <= 0) return candidatos[_random.nextInt(candidatos.length)];
+
+    var roll = _random.nextInt(pesoTotal);
+    for (var i = 0; i < candidatos.length; i++) {
+      if (roll < pesos[i]) return candidatos[i];
+      roll -= pesos[i];
+    }
+    return candidatos.last;
+  }
+
   Map<String, dynamic> _elegirCartaPonderada(
     List<Map<String, dynamic>> pool, {
     Set<_EfectoRareza>? tramosPermitidos,
@@ -233,11 +269,11 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       }).toList();
 
       if (candidatosTramo.isNotEmpty) {
-        return candidatosTramo[_random.nextInt(candidatosTramo.length)];
+        return _elegirPonderadoPorTipo(candidatosTramo);
       }
       tramosRestantes.remove(tramoElegido);
     }
-    return pool[_random.nextInt(pool.length)];
+    return _elegirPonderadoPorTipo(pool);
   }
 
   void _aplicarPity(List<Map<String, dynamic>> elegidas, List<Map<String, dynamic>> poolRestante) {
@@ -599,7 +635,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       if (mounted) setState(() => _logoImagenCruda = info.image);
       stream.removeListener(listener);
     }, onError: (error, stackTrace) {
-      //debugPrint('No se pudo cargar el logo para la máscara: $error');
+      //debugPrint('No se pudo cargar el logo: $error');
       stream.removeListener(listener);
     });
     stream.addListener(listener);
@@ -1027,7 +1063,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
           ),
           const SizedBox(height: 20),
 
-          //_buildPanelPity(color),
           const SizedBox(height: 12),
           _buildPanelProbabilidades(color),
 

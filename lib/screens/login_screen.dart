@@ -12,7 +12,9 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _usuarioController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmarPasswordController = TextEditingController();
   bool _cargando = false;
+  bool _modoRegistro = false;
 
   final supabase = Supabase.instance.client;
 
@@ -30,11 +32,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _iniciarSesion() async {
+    final username = _usuarioController.text.trim().toLowerCase();
+    final password = _passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      _mostrarError('Completa usuario y contraseña.');
+      return;
+    }
+
     setState(() => _cargando = true);
     try {
-      final username = _usuarioController.text.trim().toLowerCase();
-      final password = _passwordController.text.trim();
-
       final emailFantasma = '$username@tecnistudio.app';
 
       await supabase.auth.signInWithPassword(
@@ -57,10 +64,25 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _crearCuenta() async {
+    final username = _usuarioController.text.trim().toLowerCase();
+    final password = _passwordController.text.trim();
+    final confirmarPassword = _confirmarPasswordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      _mostrarError('Completa usuario y contraseña.');
+      return;
+    }
+    if (password.length < 6) {
+      _mostrarError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (password != confirmarPassword) {
+      _mostrarError('Las contraseñas no coinciden.');
+      return;
+    }
+
     setState(() => _cargando = true);
     try {
-      final username = _usuarioController.text.trim().toLowerCase();
-      final password = _passwordController.text.trim();
       final emailFantasma = '$username@tecnistudio.app';
 
       final authResponse = await supabase.auth.signUp(
@@ -77,13 +99,36 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (!mounted) return;
+
+      // Si Supabase ya dejó la sesión iniciada (sin confirmación de email),
+      // entramos directo al menú en vez de pedirle que inicie sesión de nuevo.
+      if (supabase.auth.currentSession != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MenuPrincipalScreen()),
+        );
+        return;
+      }
+
       _mostrarMensaje('¡Cuenta creada con éxito! Ahora inicia sesión.');
+      setState(() {
+        _modoRegistro = false;
+        _confirmarPasswordController.clear();
+      });
     } catch (e) {
       //debugPrint('ERROR AL CREAR CUENTA: $e');
       if (!mounted) return;
       _mostrarError('Error: $e');
     }
     if (mounted) setState(() => _cargando = false);
+  }
+
+  @override
+  void dispose() {
+    _usuarioController.dispose();
+    _passwordController.dispose();
+    _confirmarPasswordController.dispose();
+    super.dispose();
   }
 
   void _mostrarError(String mensaje) {
@@ -110,7 +155,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 'TECNI DECK',
                 style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 2.0),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 12),
+              Text(
+                _modoRegistro ? 'Crea tu cuenta' : 'Inicia sesión',
+                style: const TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 30),
 
               TextField(
                 controller: _usuarioController,
@@ -139,6 +189,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
                 ),
               ),
+              if (_modoRegistro) ...[
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _confirmarPasswordController,
+                  obscureText: true,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Confirmar contraseña',
+                    labelStyle: const TextStyle(color: Colors.white54),
+                    prefixIcon: const Icon(Icons.lock_outline, color: Colors.white54),
+                    filled: true,
+                    fillColor: Colors.black.withOpacity(0.3),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 40),
 
               if (_cargando)
@@ -154,14 +221,27 @@ class _LoginScreenState extends State<LoginScreen> {
                           backgroundColor: const Color(0xFFFFD700),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                         ),
-                        onPressed: _iniciarSesion,
-                        child: const Text('INICIAR SESIÓN', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
+                        onPressed: _modoRegistro ? _crearCuenta : _iniciarSesion,
+                        child: Text(
+                          _modoRegistro ? 'CREAR CUENTA' : 'INICIAR SESIÓN',
+                          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 15),
                     TextButton(
-                      onPressed: _crearCuenta,
-                      child: const Text('¿No tienes cuenta? Regístrate', style: TextStyle(color: Colors.white70)),
+                      onPressed: () {
+                        setState(() {
+                          _modoRegistro = !_modoRegistro;
+                          _confirmarPasswordController.clear();
+                        });
+                      },
+                      child: Text(
+                        _modoRegistro
+                            ? '¿Ya tienes cuenta? Inicia sesión'
+                            : '¿No tienes cuenta? Regístrate',
+                        style: const TextStyle(color: Colors.white70),
+                      ),
                     ),
                   ],
                 ),

@@ -32,8 +32,8 @@ class CartaWidget extends StatelessWidget {
   static const Alignment _alineacionFoto = Alignment.center;
 
   static const Map<String, String> _fondosPorRareza = {
-    'champions': 'assets/valorant/cartas/carta_champions.png',
-    'finals_champions': 'assets/valorant/cartas/carta_finals_champions.png',
+    'icono': 'assets/valorant/cartas/carta_icono.png',
+    'heroe': 'assets/valorant/cartas/carta_heroe.png',
   };
 
   static const String _fondoNormalOro = 'assets/valorant/cartas/carta_normal_oro.png';
@@ -55,6 +55,20 @@ class CartaWidget extends StatelessWidget {
   }
 
   bool get _tieneBandera => '${jugador['pais'] ?? ''}'.trim().isNotEmpty;
+
+  String get _rareza => '${jugador['rareza'] ?? 'normal'}'.toLowerCase().replaceAll(' ', '_');
+
+  bool get _esIcono => _rareza == 'icono';
+
+  bool get _esHeroe => _rareza == 'heroe';
+
+  String get _rutaLogoEquipoEspecial {
+    if (_esIcono) {
+      return 'assets/valorant/equipos/logo/icono.png';
+    }
+    final region = '${jugador['region'] ?? 'default'}'.toLowerCase();
+    return 'assets/valorant/equipos/logo/heroe_$region.png';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +127,7 @@ class CartaWidget extends StatelessWidget {
                                     Colors.white,
                                     Colors.transparent,
                                   ],
-                                  stops: [0.0, 0.7, 1.0],
+                                  stops: [0.5, 0.6, 1.0],
                                 ).createShader(rect);
                               },
                               child: Transform.scale(
@@ -201,21 +215,29 @@ class CartaWidget extends StatelessWidget {
                       children: [
                         Opacity(
                           opacity: opacidadEquipo,
-                          child: _logoWidget(
-                            imagePath: 'assets/valorant/equipos/${(jugador['region'] ?? 'default').toString().toLowerCase()}/${(jugador['equipo'] ?? 'default').toString().toLowerCase()}.png',
-                            label: '${jugador['equipo'] ?? 'Equipo'}',
-                            size: w * 0.12,
-                          ),
+                          child: (_esIcono || _esHeroe)
+                              ? _logoWidget(
+                                  imagePath: _rutaLogoEquipoEspecial,
+                                  label: _esIcono ? 'Icono' : 'Héroe · ${jugador['region'] ?? 'Region'}',
+                                  size: w * 0.12,
+                                )
+                              : _logoWidget(
+                                  imagePath: 'assets/valorant/equipos/${(jugador['region'] ?? 'default').toString().toLowerCase()}/${(jugador['equipo'] ?? 'default').toString().toLowerCase()}.png',
+                                  label: '${jugador['equipo'] ?? 'Equipo'}',
+                                  size: w * 0.12,
+                                ),
                         ),
-                        SizedBox(height: h * 0.012),
-                        Opacity(
-                          opacity: opacidadRegion,
-                          child: _logoWidget(
-                            imagePath: 'assets/valorant/regiones/${(jugador['region'] ?? 'default').toString().toLowerCase()}.png',
-                            label: '${jugador['region'] ?? 'Region'}',
-                            size: w * 0.12,
+                        if (!_esHeroe && !_esIcono) ...[
+                          SizedBox(height: h * 0.012),
+                          Opacity(
+                            opacity: opacidadRegion,
+                            child: _logoWidget(
+                              imagePath: 'assets/valorant/regiones/${(jugador['region'] ?? 'default').toString().toLowerCase()}.png',
+                              label: '${jugador['region'] ?? 'Region'}',
+                              size: w * 0.12,
+                            ),
                           ),
-                        ),
+                        ],
                         if (_tieneBandera) ...[
                           SizedBox(height: h * 0.012),
                           Opacity(

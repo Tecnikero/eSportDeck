@@ -15,6 +15,8 @@ const Color _kDorado = Color(0xFFFFD700);
 const Color _kTextoSuave = Color(0xFFB9B4B4);
 const Color _kBorde = Color(0x33FFFFFF);
 const Color _kCian = Color(0xFF29E0E0);
+const Color _kAtaque = Color(0xFFFF4B4B);
+const Color _kDefensa = Color(0xFF4B9CFF);
 
 const List<double> _kMatrizGrisEvento = <double>[
   0.2126, 0.7152, 0.0722, 0, 0,
@@ -159,21 +161,73 @@ const Map<String, List<String>> _agentesPorRol = {
   'CEN': ['Killjoy', 'Cypher', 'Sage', 'Chamber', 'Deadlock', 'Vyse'],
 };
 
-const Map<String, List<String>> _agentesFuertesPorMapa = {
-  'Abyss': ['Gekko', 'Omen', 'Killjoy', 'Sova'],
-  'Ascent': ['Jett', 'Omen', 'Killjoy', 'Fade'],
-  'Bind': ['Raze', 'Brimstone', 'Cypher', 'Skye'],
-  'Breeze': ['Viper', 'Sova', 'Jett', 'Chamber'],
-  'Corrode': ['Vyse', 'Sova', 'Omen', 'Breach'],
-  'Fracture': ['Raze', 'Breach', 'KAY/O', 'Cypher'],
-  'Haven': ['Breach', 'Astra', 'KAY/O', 'Sova'],
-  'Lotus': ['Viper', 'Killjoy', 'Neon', 'Gekko'],
-  'Pearl': ['Viper', 'Astra', 'Cypher', 'Fade'],
-  'Split': ['Raze', 'Cypher', 'Breach', 'Omen'],
-  'Summit': ['Omen', 'Sova', 'Jett', 'Killjoy'],
-  'Sunset': ['Jett', 'Astra', 'Killjoy', 'Fade'],
-  'Icebox': ['Sova', 'Viper', 'Chamber', 'Skye'],
-};
+const List<Map<String, dynamic>> _identidadesComposicion = [
+  {
+    'nombre': 'Doble Controlador',
+    'rol': 'CON',
+    'cantidad': 2,
+    'bonoAtaque': 1.0,
+    'bonoDefensa': 1.5,
+    'descripcion': 'Doble humo: control total del sitio y visión. Mejor en defensa.',
+  },
+  {
+    'nombre': 'Doble Centinela',
+    'rol': 'CEN',
+    'cantidad': 2,
+    'bonoAtaque': -1.0,
+    'bonoDefensa': 3.0,
+    'descripcion': 'Doble anti-flanco: sitio inexpugnable, lentos para entrar.',
+  },
+  {
+    'nombre': 'Doble Duelista',
+    'rol': 'DUE',
+    'cantidad': 2,
+    'bonoAtaque': 3.0,
+    'bonoDefensa': -1.0,
+    'descripcion': 'Doble entry: presión constante, pero débiles para holdear.',
+  },
+  {
+    'nombre': 'Doble Iniciador',
+    'rol': 'INI',
+    'cantidad': 2,
+    'bonoAtaque': 2.0,
+    'bonoDefensa': 0.5,
+    'descripcion': 'Mucha información para ejecuciones organizadas.',
+  },
+];
+
+const List<Map<String, dynamic>> _sinergiasAgentes = [
+  {
+    'par': ['Fade', 'Raze'],
+    'nombre': 'Fade + Raze',
+    'descripcion': 'Fade marca al enemigo y Raze remata con su utilidad explosiva.',
+  },
+  {
+    'par': ['Sova', 'Breach'],
+    'nombre': 'Sova + Breach',
+    'descripcion': 'Recon perfecto: información y aturdimiento para iniciar el sitio.',
+  },
+  {
+    'par': ['Omen', 'Jett'],
+    'nombre': 'Omen + Jett',
+    'descripcion': 'Humo ciega la línea y Jett entra a máxima velocidad.',
+  },
+  {
+    'par': ['Killjoy', 'Cypher'],
+    'nombre': 'Killjoy + Cypher',
+    'descripcion': 'Doble red de información: el sitio queda imposible de retomar.',
+  },
+  {
+    'par': ['Breach', 'Raze'],
+    'nombre': 'Breach + Raze',
+    'descripcion': 'Aturdimiento más explosivos: limpieza total antes de entrar.',
+  },
+  {
+    'par': ['Viper', 'Killjoy'],
+    'nombre': 'Viper + Killjoy',
+    'descripcion': 'Veneno más trampas: la zona se vuelve territorio hostil.',
+  },
+];
 
 const List<Map<String, String>> _mapasValorant = [
   {'nombre': 'Abyss', 'imagen': 'assets/valorant/mapas/abyss.png'},
@@ -314,61 +368,105 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
   String _region(Map<String, dynamic> j) => '${j['region'] ?? ''}'.trim().toLowerCase();
   String _equipo(Map<String, dynamic> j) => '${j['equipo'] ?? ''}'.trim().toLowerCase();
   String _pais(Map<String, dynamic> j) => '${j['pais'] ?? ''}'.trim().toLowerCase();
+  String _rareza(Map<String, dynamic> j) => '${j['rareza'] ?? 'normal'}'.trim().toLowerCase().replaceAll(' ', '_');
+  bool _esIcono(Map<String, dynamic> j) => _rareza(j) == 'icono';
+  bool _esHeroe(Map<String, dynamic> j) => _rareza(j) == 'heroe';
 
-  static const int _quimicaObjetivosMax = 4;
-  static const double _quimicaPuntosPorObjetivo = 0.5;
+  int _quimicaDeCarta(Map<String, dynamic> carta, List<Map<String, dynamic>> roster) {
+    if (_esIcono(carta)) return 3;
 
-  bool get _balanceDeRoles {
-    if (_seleccionados.length < 4) return false;
-    final rolesPresentes = _seleccionados.map(_rol).toSet();
-    return _rolesPrincipales.every(rolesPresentes.contains);
+    bool matchPais = false;
+    bool matchRegion = false;
+    bool matchEquipo = false;
+
+    final miPais = _pais(carta);
+    final miRegion = _region(carta);
+    final miEquipo = _equipo(carta);
+    final soyHeroe = _esHeroe(carta);
+
+    for (final compa in roster) {
+      if (identical(compa, carta)) continue;
+
+      if (_esIcono(compa)) {
+        matchPais = true;
+        matchRegion = true;
+        matchEquipo = true;
+        continue;
+      }
+
+      if (miPais.isNotEmpty && miPais == _pais(compa)) matchPais = true;
+
+      if (soyHeroe) {
+        if (_region(compa).isNotEmpty && _region(compa) == miRegion) {
+          matchRegion = true;
+          matchEquipo = true;
+        }
+      } else {
+        if (miRegion.isNotEmpty && miRegion == _region(compa)) matchRegion = true;
+        if (miEquipo.isNotEmpty && miEquipo == _equipo(compa)) matchEquipo = true;
+        if (_esHeroe(compa) && _region(compa).isNotEmpty && _region(compa) == miRegion) {
+          matchRegion = true;
+          matchEquipo = true;
+        }
+      }
+    }
+
+    int pts = 0;
+    if (matchPais) pts += 1;
+    if (matchRegion) pts += 1;
+    if (matchEquipo) pts += 1;
+
+    return pts;
   }
-
-  int _quimicaEnRoster(Map<String, dynamic> carta, List<Map<String, dynamic>> roster) {
-    var objetivos = 0;
-
-    final rolesPresentes = roster.map(_rol).toSet();
-    final balance = roster.length >= 4 && _rolesPrincipales.every(rolesPresentes.contains);
-    if (balance) objetivos += 1;
-
-    final region = _region(carta);
-    if (region.isNotEmpty && roster.where((j) => _region(j) == region).length > 1) {
-      objetivos += 1;
-    }
-
-    final equipo = _equipo(carta);
-    if (equipo.isNotEmpty && roster.where((j) => _equipo(j) == equipo).length > 1) {
-      objetivos += 1;
-    }
-
-    final pais = _pais(carta);
-    if (pais.isNotEmpty && roster.where((j) => _pais(j) == pais).length > 1) {
-      objetivos += 1;
-    }
-
-    return objetivos;
-  }
-
-  int _quimicaDeCarta(Map<String, dynamic> carta) => _quimicaEnRoster(carta, _seleccionados);
 
   int _quimicaSiSeElige(Map<String, dynamic> carta) =>
-      _quimicaEnRoster(carta, [..._seleccionados, carta]);
+      _quimicaDeCarta(carta, [..._seleccionados, carta]);
 
-  int get _quimicaTotalPromedio {
+  int get _quimicaTotalEquipo {
     if (_seleccionados.isEmpty) return 0;
-    final suma = _seleccionados.fold<int>(0, (s, j) => s + _quimicaDeCarta(j));
-    return (suma / _seleccionados.length).round();
+    return _seleccionados.fold<int>(0, (s, j) => s + _quimicaDeCarta(j, _seleccionados));
   }
 
-  double _ratingEfectivo(List<Map<String, dynamic>> roster, {bool conQuimica = true}) {
-    if (roster.isEmpty) return 0;
-    final suma = roster.fold<double>(0, (s, j) {
-      final ovr = (j['ovr'] ?? 0) as num;
-      final objetivos = conQuimica ? _quimicaEnRoster(j, roster) : 0;
-      return s + ovr + (objetivos * _quimicaPuntosPorObjetivo);
-    });
-    return suma / roster.length;
+  List<Map<String, dynamic>> _identidadesActivas(List<Map<String, dynamic>> roster) {
+    if (roster.isEmpty) return const [];
+    final conteoPorRol = <String, int>{};
+    for (final j in roster) {
+      final rol = _rol(j);
+      conteoPorRol[rol] = (conteoPorRol[rol] ?? 0) + 1;
+    }
+    return _identidadesComposicion.where((identidad) {
+      final rol = identidad['rol'] as String;
+      final cantidad = identidad['cantidad'] as int;
+      return (conteoPorRol[rol] ?? 0) >= cantidad;
+    }).toList();
   }
+
+  double _bonoIdentidad(List<Map<String, dynamic>> roster, bool atacando) {
+    final activas = _identidadesActivas(roster);
+    return activas.fold<double>(0.0, (s, id) => s + (atacando ? id['bonoAtaque'] : id['bonoDefensa']));
+  }
+
+  double _ratingDinamico(List<Map<String, dynamic>> roster, bool atacando) {
+    if (roster.isEmpty) return 0;
+    
+    final sumaOvr = roster.fold<double>(0, (s, j) => s + (j['ovr'] ?? 0));
+    final basePromedio = sumaOvr / roster.length;
+    
+    final quimicaTotal = roster.fold<int>(0, (s, j) => s + _quimicaDeCarta(j, roster));
+    final bonoLado = _bonoIdentidad(roster, atacando);
+    
+    return basePromedio + quimicaTotal + bonoLado;
+  }
+
+  List<Map<String, dynamic>> _sinergiasActivas() {
+    final agentesElegidos = _agentesAsignados.whereType<String>().toSet();
+    return _sinergiasAgentes.where((sinergia) {
+      final par = (sinergia['par'] as List).cast<String>();
+      return par.every(agentesElegidos.contains);
+    }).toList();
+  }
+
+  double _bonoSinergiaAgentes() => _sinergiasActivas().length * 0.5;
 
   int _rachaActual(bool paraJugador) {
     var racha = 0;
@@ -383,25 +481,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     return racha;
   }
 
-  double _bonificacionSinergia() {
-    final mapa = _mapaActual;
-    if (mapa == null) return 0;
-    final buenos = _agentesFuertesPorMapa[mapa['nombre']] ?? const <String>[];
-    var puntos = 0.0;
-    for (final agente in _agentesAsignados) {
-      if (agente != null && buenos.contains(agente)) puntos += 0.5;
-    }
-    return puntos;
-  }
-
   String _formatoBono(double valor) =>
       valor == valor.roundToDouble() ? valor.toInt().toString() : valor.toStringAsFixed(1);
-
-  bool _esBuenPick(String? agente) {
-    final mapa = _mapaActual;
-    if (agente == null || mapa == null) return false;
-    return (_agentesFuertesPorMapa[mapa['nombre']] ?? const <String>[]).contains(agente);
-  }
 
   String _rutaAgente(String agente) {
     final archivo = agente.toLowerCase().replaceAll('/', '').replaceAll(' ', '_');
@@ -431,27 +512,30 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
       _historialRondas.clear();
       _timelineEventos.clear();
       _rondaEnVivo = null;
-      _bonoSinergia = _bonificacionSinergia();
+      _bonoSinergia = _bonoSinergiaAgentes();
     });
 
     try {
       _rosterRival = await _generarRivalIA();
 
-      final miMediaBase = _ratingEfectivo(_seleccionados, conQuimica: true) + _bonoSinergia;
-      final rivalMediaBase = _ratingEfectivo(_rosterRival, conQuimica: true);
-
-      final ruidoPartido = (_random.nextDouble() * 6) - 3;
-      final ratingPropio = miMediaBase + (ruidoPartido / 2);
-      final ratingRival = rivalMediaBase - (ruidoPartido / 2);
-
       while (_rondasJugador < _rondasParaGanar && _rondasIA < _rondasParaGanar) {
         final numeroRonda = _rondaActual + 1;
+        
+        final jugadorAtacando = numeroRonda <= 4;
+        final iaAtacando = !jugadorAtacando;
 
         setState(() {
           _rondaActual = numeroRonda;
           _resolviendoRonda = true;
           _rondaEnVivo = {'ronda': numeroRonda, 'lineas': <String>[]};
         });
+
+        final miMediaDinamica = _ratingDinamico(_seleccionados, jugadorAtacando) + _bonoSinergia;
+        final rivalMediaDinamica = _ratingDinamico(_rosterRival, iaAtacando);
+
+        final ruidoPartido = (_random.nextDouble() * 6) - 3;
+        final ratingPropio = miMediaDinamica + (ruidoPartido / 2);
+        final ratingRival = rivalMediaDinamica - (ruidoPartido / 2);
 
         final rachaJugador = _rachaActual(true);
         final rachaRival = _rachaActual(false);
@@ -463,11 +547,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
 
         if (_random.nextInt(100) < 8) {
           final golpe = 6 + _random.nextInt(7);
-          if (_random.nextBool()) {
-            miPuntaje += golpe;
-          } else {
-            rivalPuntaje += golpe;
-          }
+          if (_random.nextBool()) miPuntaje += golpe;
+          else rivalPuntaje += golpe;
         }
 
         bool ganeLaRonda;
@@ -483,10 +564,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
         final caidoCarta = equipoPerdedor[_random.nextInt(equipoPerdedor.length)];
         final heroe = '${heroeCarta['nombre'] ?? 'Jugador'}';
         final caido = '${caidoCarta['nombre'] ?? 'Rival'}';
-        final lineaHeroe =
-            _eventosPositivos[_random.nextInt(_eventosPositivos.length)].replaceAll('{jugador}', heroe);
-        final lineaCaido =
-            _eventosNegativos[_random.nextInt(_eventosNegativos.length)].replaceAll('{jugador}', caido);
+        final lineaHeroe = _eventosPositivos[_random.nextInt(_eventosPositivos.length)].replaceAll('{jugador}', heroe);
+        final lineaCaido = _eventosNegativos[_random.nextInt(_eventosNegativos.length)].replaceAll('{jugador}', caido);
 
         setState(() {
           _rondaEnVivo = {
@@ -501,25 +580,14 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
         await Future.delayed(const Duration(milliseconds: 700));
         if (!mounted) return;
         setState(() {
-          _rondaEnVivo = {
-            'ronda': numeroRonda,
-            'gano': ganeLaRonda,
-            'heroeCarta': heroeCarta,
-            'caidoCarta': caidoCarta,
-            'lineas': [lineaHeroe],
-          };
+          _rondaEnVivo?['caidoCarta'] = caidoCarta;
+          _rondaEnVivo?['lineas'] = [lineaHeroe];
         });
 
         await Future.delayed(const Duration(milliseconds: 900));
         if (!mounted) return;
         setState(() {
-          _rondaEnVivo = {
-            'ronda': numeroRonda,
-            'gano': ganeLaRonda,
-            'heroeCarta': heroeCarta,
-            'caidoCarta': caidoCarta,
-            'lineas': [lineaHeroe, lineaCaido],
-          };
+          _rondaEnVivo?['lineas'] = [lineaHeroe, lineaCaido];
         });
 
         await Future.delayed(const Duration(milliseconds: 700));
@@ -536,11 +604,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
             'caidoCarta': caidoCarta,
             'lineas': [lineaHeroe, lineaCaido],
           });
-          if (ganeLaRonda) {
-            _rondasJugador += 1;
-          } else {
-            _rondasIA += 1;
-          }
+          if (ganeLaRonda) _rondasJugador += 1;
+          else _rondasIA += 1;
         });
 
         await Future.delayed(const Duration(milliseconds: 1000));
@@ -548,11 +613,10 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
       }
 
       final victoria = _rondasJugador > _rondasIA;
-
       final mvp = List<Map<String, dynamic>>.from(_seleccionados)
         ..sort((a, b) {
-          final ratingA = ((a['ovr'] ?? 0) as num) + _quimicaDeCarta(a);
-          final ratingB = ((b['ovr'] ?? 0) as num) + _quimicaDeCarta(b);
+          final ratingA = ((a['ovr'] ?? 0) as num) + _quimicaDeCarta(a, _seleccionados);
+          final ratingB = ((b['ovr'] ?? 0) as num) + _quimicaDeCarta(b, _seleccionados);
           return ratingB.compareTo(ratingA);
         });
 
@@ -608,7 +672,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
         if (i != index && _agentesAsignados[i] != null) _agentesAsignados[i]!
     };
     final agentes = agentesDelRol.where((a) => !usadosPorOtros.contains(a)).toList();
-
     final nombreMapa = _mapaActual?['nombre'] ?? '';
 
     await showModalBottomSheet<void>(
@@ -645,11 +708,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                 'Rol: $rol  ·  Mapa: $nombreMapa',
                 style: const TextStyle(color: Colors.white54, fontSize: 12),
               ),
-              const SizedBox(height: 6),
-              const Text(
-                '⭐ = comfort pick para este mapa (+1 táctico oculto)',
-                style: TextStyle(color: _kDorado, fontSize: 11),
-              ),
               const SizedBox(height: 16),
               if (agentes.isEmpty)
                 const Padding(
@@ -666,7 +724,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                 spacing: 14,
                 runSpacing: 14,
                 children: agentes.map((agente) {
-                  final esBueno = _esBuenPick(agente);
                   return GestureDetector(
                     onTap: () {
                       setState(() => _agentesAsignados[index] = agente);
@@ -683,13 +740,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: _kFondo,
-                              border: Border.all(
-                                color: esBueno ? _kDorado : Colors.white24,
-                                width: esBueno ? 2.5 : 1.5,
-                              ),
-                              boxShadow: esBueno
-                                  ? [BoxShadow(color: _kDorado.withOpacity(0.5), blurRadius: 8)]
-                                  : null,
+                              border: Border.all(color: Colors.white24, width: 1.5),
                             ),
                             child: ClipOval(
                               child: Image.asset(
@@ -704,18 +755,13 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                             ),
                           ),
                           const SizedBox(height: 5),
-                          if (esBueno)
-                            const Padding(
-                              padding: EdgeInsets.only(bottom: 2.0),
-                              child: Icon(Icons.star, color: _kDorado, size: 12),
-                            ),
                           Text(
                             agente,
                             textAlign: TextAlign.center,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: esBueno ? _kDorado : Colors.white,
+                            style: const TextStyle(
+                              color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 11,
                             ),
@@ -730,6 +776,135 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _mostrarComboTactico() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+          padding: EdgeInsets.fromLTRB(
+            16, 20, 16, 24 + MediaQuery.of(context).padding.bottom,
+          ),
+          decoration: BoxDecoration(
+            color: _kFondoPanel,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: _kRojo, width: 1.5),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const _Encabezado(
+                  icono: Icons.tips_and_updates,
+                  titulo: 'COMBOS TÁCTICOS',
+                  subtitulo: 'Estos combos suman puntos a tu OVR total según el lado.',
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'IDENTIDAD DE COMPOSICIÓN (ATK / DEF)',
+                  style: TextStyle(color: _kDorado, fontWeight: FontWeight.w900, fontSize: 12.5, letterSpacing: 0.8),
+                ),
+                const SizedBox(height: 8),
+                ..._identidadesComposicion.map((c) => _filaComboDinamico(c)),
+                const SizedBox(height: 18),
+                const Text(
+                  'SINERGIAS DE AGENTES (GLOBAL)',
+                  style: TextStyle(color: _kCian, fontWeight: FontWeight.w900, fontSize: 12.5, letterSpacing: 0.8),
+                ),
+                const SizedBox(height: 8),
+                ..._sinergiasAgentes.map((s) => _filaComboEstatico(s, cian: true)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _filaComboDinamico(Map<String, dynamic> combo) {
+    final atk = (combo['bonoAtaque'] as num).toDouble();
+    final def = (combo['bonoDefensa'] as num).toDouble();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.groups, color: _kDorado, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${combo['nombre']}',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12.5),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${combo['descripcion']}',
+                  style: const TextStyle(color: _kTextoSuave, fontSize: 11.5, height: 1.3),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'ATK ${atk >= 0 ? '+' : ''}${_formatoBono(atk)}',
+                style: TextStyle(color: atk >= 0 ? _kAtaque : _kTextoSuave, fontWeight: FontWeight.w900, fontSize: 11),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'DEF ${def >= 0 ? '+' : ''}${_formatoBono(def)}',
+                style: TextStyle(color: def >= 0 ? _kDefensa : _kTextoSuave, fontWeight: FontWeight.w900, fontSize: 11),
+              ),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _filaComboEstatico(Map<String, dynamic> combo, {bool cian = false}) {
+    final color = cian ? _kCian : _kDorado;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.auto_awesome, color: color, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${combo['nombre']}',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12.5),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${combo['descripcion']}',
+                  style: const TextStyle(color: _kTextoSuave, fontSize: 11.5, height: 1.3),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '+0.5',
+            style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12.5),
+          ),
+        ],
+      ),
     );
   }
 
@@ -749,6 +924,28 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     });
   }
 
+  Widget _puntitosQuimica(int valor) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(3, (i) {
+        final activo = i < valor;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 1.5),
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: activo ? _kDorado : Colors.transparent,
+              border: Border.all(color: activo ? _kDorado : Colors.white30, width: 1),
+              boxShadow: activo ? [BoxShadow(color: _kDorado.withOpacity(0.6), blurRadius: 4)] : null,
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -759,6 +956,30 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: IconButton(
+              onPressed: _mostrarComboTactico,
+              icon: Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _kRojo.withOpacity(0.12),
+                  border: Border.all(color: _kRojo.withOpacity(0.6), width: 1.5),
+                ),
+                child: const Center(
+                  child: Text(
+                    '?',
+                    style: TextStyle(color: _kRojo, fontWeight: FontWeight.w900, fontSize: 15),
+                  ),
+                ),
+              ),
+              tooltip: 'Combos tácticos',
+            ),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(2),
           child: Container(height: 2, color: _kRojo),
@@ -785,7 +1006,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
           child: _Encabezado(
             icono: Icons.local_fire_department,
             titulo: 'ARMA TU EQUIPO',
-            subtitulo: 'Toca una casilla, aparecerán 4 jugadores y eliges uno.',
+            subtitulo: 'Suma química combinando País, Región y Equipo.',
           ),
         ),
         if (_error != null)
@@ -841,8 +1062,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                     ),
                     child: CartaWidget(jugador: carta, width: 100),
                   ),
-                  const SizedBox(height: 5),
-                  _puntitosQuimica(_quimicaDeCarta(carta)),
+                  const SizedBox(height: 6),
+                  _puntitosQuimica(_quimicaDeCarta(carta, _seleccionados)),
                 ],
               )
             : AspectRatio(
@@ -901,7 +1122,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
             icono: Icons.map_outlined,
             titulo: 'MAPA: ${nombreMapa.toUpperCase()}',
             color: _kDorado,
-            subtitulo: 'Elige un agente por jugador. La ⭐ marca un buen pick para este mapa.',
+            subtitulo: 'Elige los agentes. Busca sinergias de habilidades.',
           ),
         ),
         const SizedBox(height: 14),
@@ -929,7 +1150,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
   Widget _buildCasillaAgente(int index) {
     final carta = _casillas[index]!;
     final agenteActual = _agentesAsignados[index];
-    final esBuenPick = _esBuenPick(agenteActual);
 
     return SizedBox(
       width: 100,
@@ -946,46 +1166,30 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
               child: CartaWidget(jugador: carta, width: 100),
             ),
             const SizedBox(height: 6),
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _kFondo,
-                    border: Border.all(
-                      color: agenteActual == null
-                          ? Colors.white24
-                          : (esBuenPick ? _kDorado : _kRojoOscuro),
-                      width: esBuenPick ? 2.5 : 1.5,
-                    ),
-                    boxShadow: esBuenPick
-                        ? [BoxShadow(color: _kDorado.withOpacity(0.5), blurRadius: 6)]
-                        : null,
-                  ),
-                  child: agenteActual == null
-                      ? const Icon(Icons.add, color: Colors.white38, size: 20)
-                      : ClipOval(
-                          child: Image.asset(
-                            _rutaAgente(agenteActual),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => const Icon(
-                              Icons.person,
-                              color: Colors.white38,
-                              size: 20,
-                            ),
-                          ),
-                        ),
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _kFondo,
+                border: Border.all(
+                  color: agenteActual == null ? Colors.white24 : _kCian,
+                  width: 1.5,
                 ),
-                if (esBuenPick)
-                  const Positioned(
-                    top: -3,
-                    right: -3,
-                    child: Icon(Icons.star, color: _kDorado, size: 15),
-                  ),
-              ],
+              ),
+              child: agenteActual == null
+                  ? const Icon(Icons.add, color: Colors.white38, size: 20)
+                  : ClipOval(
+                      child: Image.asset(
+                        _rutaAgente(agenteActual),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const Icon(
+                          Icons.person,
+                          color: Colors.white38,
+                          size: 20,
+                        ),
+                      ),
+                    ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -1006,13 +1210,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
   }
 
   Widget _buildPanelQuimica() {
-    final rolesPresentes = _seleccionados.map(_rol).toSet();
-    final rolesOk = _rolesPrincipales.where(rolesPresentes.contains).length;
-    final regionOk = _seleccionados.any(
-        (j) => _region(j).isNotEmpty && _seleccionados.where((k) => _region(k) == _region(j)).length > 1);
-    final equipoOk = _seleccionados.any(
-        (j) => _equipo(j).isNotEmpty && _seleccionados.where((k) => _equipo(k) == _equipo(j)).length > 1);
-
     return _Tarjeta(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(
@@ -1022,67 +1219,25 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
             children: [
               const Icon(Icons.bolt, color: _kDorado, size: 18),
               const SizedBox(width: 6),
-              const Text('Química del equipo',
+              const Text('Química Total',
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
               const Spacer(),
-              Text('$_quimicaTotalPromedio/3', style: const TextStyle(color: _kDorado, fontSize: 13, fontWeight: FontWeight.bold)),
+              Text('$_quimicaTotalEquipo / 15', 
+                style: const TextStyle(color: _kDorado, fontSize: 13, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
-              value: (_quimicaTotalPromedio / 3).clamp(0, 1).toDouble(),
+              value: (_quimicaTotalEquipo / 15).clamp(0.0, 1.0),
               minHeight: 6,
               backgroundColor: Colors.white10,
               valueColor: const AlwaysStoppedAnimation(_kDorado),
             ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _miniIndicador(Icons.groups, 'Roles', '$rolesOk/4', rolesOk == 4),
-              _miniIndicador(Icons.public, 'Región', regionOk ? 'Sí' : 'No', regionOk),
-              _miniIndicador(Icons.shield, 'Equipo', equipoOk ? 'Sí' : 'No', equipoOk),
-            ],
-          ),
         ],
       ),
-    );
-  }
-
-  Widget _miniIndicador(IconData icono, String label, String valor, bool activo) {
-    final color = activo ? _kDorado : Colors.white38;
-    return Column(
-      children: [
-        Icon(icono, size: 16, color: color),
-        const SizedBox(height: 3),
-        Text(label, style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w600)),
-        Text(valor, style: TextStyle(color: activo ? Colors.white : Colors.white38, fontSize: 11, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-
-  Widget _puntitosQuimica(int valor) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(_quimicaObjetivosMax, (i) {
-        final activo = i < valor;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 1.5),
-          child: Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: activo ? _kDorado : Colors.transparent,
-              border: Border.all(color: activo ? _kDorado : Colors.white30, width: 1),
-              boxShadow: activo ? [BoxShadow(color: _kDorado.withOpacity(0.6), blurRadius: 4)] : null,
-            ),
-          ),
-        );
-      }),
     );
   }
 
@@ -1142,6 +1297,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
 
   Widget _buildMarcador() {
     final nombreMapa = _mapaActual?['nombre']?.toUpperCase() ?? '';
+    final jugadorAtacando = _rondaActual == 0 || _rondaActual <= 4;
+    
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -1168,7 +1325,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _escudoEquipo(icono: Icons.shield, color: _kRojo, etiqueta: 'TÚ'),
+                  _escudoEquipo(icono: Icons.shield, color: _kRojo, etiqueta: 'TÚ', lado: jugadorAtacando ? 'ATK' : 'DEF'),
                   Column(
                     children: [
                       Text(
@@ -1200,7 +1357,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                       ),
                     ],
                   ),
-                  _escudoEquipo(icono: Icons.smart_toy, color: Colors.white54, etiqueta: 'IA'),
+                  _escudoEquipo(icono: Icons.smart_toy, color: Colors.white54, etiqueta: 'IA', lado: !jugadorAtacando ? 'ATK' : 'DEF'),
                 ],
               ),
             ],
@@ -1225,7 +1382,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     );
   }
 
-  Widget _escudoEquipo({required IconData icono, required Color color, required String etiqueta}) {
+  Widget _escudoEquipo({required IconData icono, required Color color, required String etiqueta, required String lado}) {
+    final colorLado = lado == 'ATK' ? _kAtaque : _kDefensa;
     return Column(
       children: [
         Container(
@@ -1241,7 +1399,12 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
         const SizedBox(height: 4),
         Text(
           etiqueta,
-          style: const TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.6),
+          style: const TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.6),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          lado,
+          style: TextStyle(color: colorLado, fontSize: 10, fontWeight: FontWeight.w900),
         ),
       ],
     );
@@ -1345,18 +1508,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
             ),
           ],
         ),
-        if (rachaJugador >= 3)
-          const Padding(
-            padding: EdgeInsets.only(top: 8.0),
-            child: Text('¡Tu equipo está en racha! +1 de impulso',
-                style: TextStyle(color: _kDorado, fontSize: 11.5, fontWeight: FontWeight.bold)),
-          )
-        else if (rachaRival >= 3)
-          const Padding(
-            padding: EdgeInsets.only(top: 8.0),
-            child: Text('La IA está en racha, -1 a tu equipo',
-                style: TextStyle(color: _kRojo, fontSize: 11.5, fontWeight: FontWeight.bold)),
-          ),
       ],
     );
   }
@@ -1551,7 +1702,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     );
   }
 
-
   Widget _buildResultado() {
     final color = _victoria ? _kDorado : _kRojo;
     return SingleChildScrollView(
@@ -1574,14 +1724,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                   'Marcador final: $_rondasJugador - $_rondasIA',
                   style: const TextStyle(color: _kTextoSuave, fontSize: 14.5),
                 ),
-                if (_bonoSinergia > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4.0),
-                    child: Text(
-                      'Ventaja táctica por sinergia: +${_formatoBono(_bonoSinergia)}',
-                      style: const TextStyle(color: _kDorado, fontSize: 11.5, fontWeight: FontWeight.bold),
-                    ),
-                  ),
                 const SizedBox(height: 18),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1614,8 +1756,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                       style: TextStyle(color: Colors.white54, fontSize: 12.5, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                   const SizedBox(height: 14),
                   CartaWidget(jugador: _mvp!, width: 200),
-                  const SizedBox(height: 8),
-                  _puntitosQuimica(_quimicaDeCarta(_mvp!)),
+                  const SizedBox(height: 12),
+                  _puntitosQuimica(_quimicaDeCarta(_mvp!, _seleccionados)),
                 ],
               ),
             ),
@@ -1656,11 +1798,11 @@ class _SelectorCartasSheetState extends State<_SelectorCartasSheet> {
       });
     }
   }
-
-  Widget _puntitos(int valor) {
+  
+  Widget _puntitosPreview(int valor) {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(4, (i) {
+      children: List.generate(3, (i) {
         final activo = i < valor;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 1.5),
@@ -1759,7 +1901,7 @@ class _SelectorCartasSheetState extends State<_SelectorCartasSheet> {
                 ),
               ),
               const SizedBox(height: 6),
-              _puntitos(widget.quimicaPreview(carta)),
+              _puntitosPreview(widget.quimicaPreview(carta)),
             ],
           ),
         ),

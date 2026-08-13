@@ -18,10 +18,16 @@ const List<Map<String, dynamic>> _tramosBasico = [
   {'min': 92, 'max': 99, 'peso': 1, 'efecto': 'dorado'},
 ];
 const List<Map<String, dynamic>> _tramosPlata = [
-  {'min': 0, 'max': 79, 'peso': 100, 'efecto': 'ninguno'},
-  {'min': 80, 'max': 81, 'peso': 0, 'efecto': 'plata'},
+  {'min': 0, 'max': 78, 'peso': 100, 'efecto': 'ninguno'},
+  {'min': 79, 'max': 81, 'peso': 0, 'efecto': 'plata'},
   {'min': 82, 'max': 88, 'peso': 0, 'efecto': 'violeta'},
   {'min': 89, 'max': 99, 'peso': 0, 'efecto': 'dorado'},
+];
+const List<Map<String, dynamic>> _tramosespecial = [
+  {'min': 79, 'max': 82, 'peso': 0, 'efecto': 'ninguno'},
+  {'min': 83, 'max': 87, 'peso': 0, 'efecto': 'plata'},
+  {'min': 88, 'max': 91, 'peso': 50, 'efecto': 'violeta'},
+  {'min': 92, 'max': 99, 'peso': 50, 'efecto': 'dorado'},
 ];
 
 const List<Map<String, dynamic>> tiposSobre = [
@@ -50,14 +56,14 @@ const List<Map<String, dynamic>> tiposSobre = [
     'tramos': _tramosPlata,
     'garantia': false,
     'descripcion': '2 cartas aleatorias de plata del catálogo.',
-  },
+  }
 ];
 
 const List<Map<String, dynamic>> _tramosPremium = [
-  {'min': 0, 'max': 84, 'peso': 40, 'efecto': 'ninguno'},
-  {'min': 85, 'max': 88, 'peso': 35, 'efecto': 'plata'},
-  {'min': 89, 'max': 91, 'peso': 18, 'efecto': 'violeta'},
-  {'min': 92, 'max': 99, 'peso': 7, 'efecto': 'dorado'},
+  {'min': 0, 'max': 78, 'peso': 45, 'efecto': 'ninguno'},
+  {'min': 79, 'max': 86, 'peso': 40, 'efecto': 'plata'},
+  {'min': 87, 'max': 91, 'peso': 12, 'efecto': 'violeta'},
+  {'min': 92, 'max': 99, 'peso': 3, 'efecto': 'dorado'},
 ];
 
 final Map<String, Map<String, dynamic>> _todosLosSobres = {
@@ -70,15 +76,15 @@ const Map<String, Map<String, dynamic>> sobresGanables = {
     'id': 'premium_torneo',
     'nombre': 'Sobre Premium',
     'precio': 0,
-    'cantidad_cartas': 3,
+    'cantidad_cartas': 2,
     'icono': Icons.emoji_events,
     'imagen': 'assets/valorant/sobres/sobre_torneo.png',
     'color': Color(0xFF4A90D9),
-    'rarezas': ['Normal', 'champions', 'finals_champions'],
+    'rarezas': ['Normal', 'icono', 'heroe'],
     'tramos': _tramosPremium,
     'garantia': true,
     'descripcion':
-        '3 cartas con mucha mejor probabilidad de rareza alta.\nSe gana siendo campeón del Torneo.',
+        '2 cartas con mucha mejor probabilidad de rareza alta.\nSe gana siendo campeón del Torneo.',
   },
 };
 
@@ -488,7 +494,6 @@ class _TiendaScreenState extends State<TiendaScreen> {
                     style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.3),
                   ),
                   const SizedBox(height: 4),
-                  //_indicadorPity(sobre['id'] as String),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

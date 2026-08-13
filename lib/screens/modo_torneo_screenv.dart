@@ -754,7 +754,7 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
     try {
       await supabase.rpc('fn_pagar_monedas_partida', params: {'p_cantidad': _premioMonedas});
     } catch (e) {
-      //debugPrint('ERROR AL PAGAR MONEDAS DE TORNEO: $e');
+      //debugPrint('ERROR AL PAGAR MONEDAS: $e');
       errorMonedas = e.toString();
     }
 
