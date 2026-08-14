@@ -2,7 +2,8 @@
     <application
         android:label="esportdeck"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -31,7 +32,6 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- AdMob App ID (google_mobile_ads) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-2905911418768905~2164776678" />

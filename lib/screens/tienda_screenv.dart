@@ -32,21 +32,21 @@ const List<Map<String, dynamic>> _tramosespecial = [
 ];
 
 const List<Map<String, dynamic>> tiposSobre = [
-  {
-    'id': 'gratis_anuncio',
-    'nombre': 'Sobre Gratis',
-    'precio': 0,
-    'cantidad_cartas': 2,
-    'icono': Icons.play_circle_outline,
-    'imagen': 'assets/valorant/sobres/sobre_ad.png',
-    'color': Color(0xFF4A90D9),
-    'rarezas': ['Normal', 'icono', 'heroe', 'tos1', 'tos2'],
-    'tramos': _tramosPremium,
-    'garantia': false,
-    'requiere_anuncio': true,
-    'limite_diario': 1,
-    'descripcion': 'Mira un anuncio y llévate 2 cartas gratis.',
-  },
+//  {
+//    'id': 'gratis_anuncio',
+//    'nombre': 'Sobre Gratis',
+//    'precio': 0,
+//    'cantidad_cartas': 2,
+//    'icono': Icons.play_circle_outline,
+//    'imagen': 'assets/valorant/sobres/sobre_ad.png',
+//    'color': Color(0xFF4A90D9),
+//    'rarezas': ['Normal', 'icono', 'heroe', 'tos1', 'tos2'],
+//    'tramos': _tramosPremium,
+//    'garantia': false,
+//    'requiere_anuncio': true,
+//    'limite_diario': 1,
+//    'descripcion': 'Mira un anuncio y llévate 2 cartas gratis.',
+//  },
   {
     'id': 'basico',
     'nombre': 'Sobre Básico',

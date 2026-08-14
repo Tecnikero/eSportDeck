@@ -2,7 +2,6 @@ import 'dart:math';
 import 'dart:ui';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/carta_widget.dart';
@@ -88,69 +87,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   String _fondoOcultoRuta = 'assets/valorant/cartas/carta_normal_plata.png';
 
   bool get _requiereAnuncio => widget.sobre['requiere_anuncio'] == true;
-  RewardedAd? _anuncioRecompensado;
-  bool _cargandoAnuncio = false;
-  bool _recompensaGanada = false;
-
-  static const String _adUnitIdAnuncio = 'ca-app-pub-3940256099942544/5224354917';
-
-  void _cargarAnuncioRecompensado() {
-    if (!_requiereAnuncio || _cargandoAnuncio || _anuncioRecompensado != null) return;
-    _cargandoAnuncio = true;
-    RewardedAd.load(
-      adUnitId: _adUnitIdAnuncio,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          _anuncioRecompensado = ad;
-          _cargandoAnuncio = false;
-          if (mounted) setState(() {});
-        },
-        onAdFailedToLoad: (error) {
-          debugPrint('Error al cargar anuncio recompensado: $error');
-          _cargandoAnuncio = false;
-          if (mounted) setState(() => _error = 'No se pudo cargar el anuncio. Intenta de nuevo.');
-        },
-      ),
-    );
-  }
-
-  Future<void> _mostrarAnuncioYReclamar() async {
-    final anuncio = _anuncioRecompensado;
-    if (anuncio == null) {
-      setState(() => _error = 'El anuncio todavía no está listo. Espera un momento.');
-      _cargarAnuncioRecompensado();
-      return;
-    }
-
-    _recompensaGanada = false;
-    anuncio.fullScreenContentCallback = FullScreenContentCallback(
-      onAdDismissedFullScreenContent: (ad) {
-        ad.dispose();
-        _anuncioRecompensado = null;
-        if (_recompensaGanada) {
-          _reclamarSobrePorAnuncio();
-        } else {
-          if (mounted) {
-            setState(() => _error = 'Debes ver el anuncio completo para recibir el sobre.');
-          }
-          _cargarAnuncioRecompensado();
-        }
-      },
-      onAdFailedToShowFullScreenContent: (ad, error) {
-        ad.dispose();
-        _anuncioRecompensado = null;
-        if (mounted) setState(() => _error = 'No se pudo mostrar el anuncio.');
-        _cargarAnuncioRecompensado();
-      },
-    );
-
-    await anuncio.show(
-      onUserEarnedReward: (ad, reward) {
-        _recompensaGanada = true;
-      },
-    );
-  }
 
   Future<void> _reclamarSobrePorAnuncio() async {
     setState(() {
@@ -279,9 +215,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
 
     _cargarImagenLogo();
     _cargarPity();
-    if (_requiereAnuncio && !widget.esPendiente) {
-      _cargarAnuncioRecompensado();
-    }
   }
 
   @override
@@ -291,7 +224,6 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     _efecto.dispose();
     _rasgado.dispose();
     _revelado.dispose();
-    _anuncioRecompensado?.dispose();
     super.dispose();
   }
 
@@ -1315,20 +1247,20 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                   color: Colors.transparent,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(15),
-                    onTap: _requiereAnuncio ? _mostrarAnuncioYReclamar : _comprar,
+                    onTap: _requiereAnuncio ? _reclamarSobrePorAnuncio : _comprar,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
                           _requiereAnuncio
-                              ? Icons.play_circle_outline
+                              ? Icons.card_giftcard
                               : (widget.esPendiente ? Icons.card_giftcard : Icons.monetization_on),
                           color: const Color(0xFF17181B),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           _requiereAnuncio
-                              ? 'VER ANUNCIO'
+                              ? 'RECLAMAR GRATIS'
                               : (widget.esPendiente ? 'ABRIR' : 'ABRIR 1 (${sobre['precio']})'),
                           style: const TextStyle(
                               color: Color(0xFF17181B), fontWeight: FontWeight.bold, fontSize: 16),
