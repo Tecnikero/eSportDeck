@@ -100,8 +100,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      // Si Supabase ya dejó la sesión iniciada (sin confirmación de email),
-      // entramos directo al menú en vez de pedirle que inicie sesión de nuevo.
       if (supabase.auth.currentSession != null) {
         Navigator.pushReplacement(
           context,

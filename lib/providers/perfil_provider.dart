@@ -18,6 +18,9 @@ class PerfilProvider extends ChangeNotifier {
 
   Map<String, int> _sobresPendientes = {};
 
+  Map<String, int> _comprasRecientesPorSobre = {};
+  Map<String, DateTime> _proximaDisponiblePorSobre = {};
+
   int? get dinero => _dinero;
   bool get cargando => _cargando;
   String? get error => _error;
@@ -31,6 +34,22 @@ class PerfilProvider extends ChangeNotifier {
   Map<String, int> get sobresPendientes => Map.unmodifiable(_sobresPendientes);
   int get totalSobresPendientes => _sobresPendientes.values.fold(0, (s, c) => s + c);
   int cantidadSobrePendiente(String sobreId) => _sobresPendientes[sobreId] ?? 0;
+
+  int comprasRecientes(String sobreId) => _comprasRecientesPorSobre[sobreId] ?? 0;
+
+  DateTime? proximaDisponible(String sobreId) => _proximaDisponiblePorSobre[sobreId];
+
+  bool puedeComprar(String sobreId, int? limiteDiario) {
+    if (limiteDiario == null) return true;
+    return comprasRecientes(sobreId) < limiteDiario;
+  }
+
+  Duration? tiempoRestante(String sobreId) {
+    final proxima = _proximaDisponiblePorSobre[sobreId];
+    if (proxima == null) return null;
+    final restante = proxima.difference(DateTime.now());
+    return restante.isNegative ? null : restante;
+  }
 
   Future<void> cargar() async {
     final userId = _supabase.auth.currentUser?.id;
@@ -58,12 +77,112 @@ class PerfilProvider extends ChangeNotifier {
       _recompensaDiariaDisponible = _calcularSiHayRecompensaDisponible();
 
       await _cargarSobresPendientes(userId);
+      await _cargarComprasRecientes();
     } catch (e) {
       debugPrint('Error al cargar el perfil: $e');
       _error = 'No se pudo cargar tu saldo.';
     } finally {
       _cargando = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _cargarComprasRecientes() async {
+    try {
+      final filas = await _supabase.rpc('fn_compras_recientes_por_sobre') as List;
+      final cantidades = <String, int>{};
+      final proximas = <String, DateTime>{};
+      for (final fila in filas) {
+        final id = '${fila['sobre_id']}';
+        cantidades[id] = (fila['cantidad'] ?? 0) as int;
+        final proximaCruda = fila['proxima_disponible'];
+        if (proximaCruda != null) {
+          final parseada = DateTime.tryParse('$proximaCruda');
+          if (parseada != null) proximas[id] = parseada;
+        }
+      }
+      _comprasRecientesPorSobre = cantidades;
+      _proximaDisponiblePorSobre = proximas;
+    } catch (e) {
+      debugPrint('Error al cargar compras recientes: $e');
+    }
+  }
+
+  Future<ResultadoCompraSobre> comprarSobre({
+    required String sobreId,
+    required int precio,
+    int? limiteDiario,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) {
+      return ResultadoCompraSobre(ok: false, motivo: MotivoFalloCompra.sinSesion);
+    }
+
+    try {
+      final resultado = await _supabase.rpc('fn_comprar_sobre', params: {
+        'p_sobre_id': sobreId,
+        'p_precio': precio,
+        'p_limite_diario': limiteDiario,
+      }) as Map<String, dynamic>;
+
+      final ok = resultado['ok'] == true;
+      if (ok) {
+        _dinero = (resultado['dinero'] as num).toInt();
+        _comprasRecientesPorSobre[sobreId] = (_comprasRecientesPorSobre[sobreId] ?? 0) + 1;
+        notifyListeners();
+        return ResultadoCompraSobre(ok: true);
+      }
+
+      final motivoCrudo = '${resultado['motivo']}';
+      if (motivoCrudo == 'limite_diario') {
+        final proximaCruda = resultado['proxima_disponible'];
+        final proxima = proximaCruda != null ? DateTime.tryParse('$proximaCruda') : null;
+        if (proxima != null) _proximaDisponiblePorSobre[sobreId] = proxima;
+        final cantidad = (resultado['compras_ultimas_24h'] as num?)?.toInt();
+        if (cantidad != null) _comprasRecientesPorSobre[sobreId] = cantidad;
+        notifyListeners();
+        return ResultadoCompraSobre(ok: false, motivo: MotivoFalloCompra.limiteDiario, proximaDisponible: proxima);
+      }
+
+      return ResultadoCompraSobre(ok: false, motivo: MotivoFalloCompra.sinDinero);
+    } catch (e) {
+      debugPrint('Error al comprar sobre: $e');
+      return ResultadoCompraSobre(ok: false, motivo: MotivoFalloCompra.error);
+    }
+  }
+
+  Future<ResultadoCompraSobre> reclamarSobreAnuncio({
+    required String sobreId,
+    int limiteDiario = 1,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) {
+      return ResultadoCompraSobre(ok: false, motivo: MotivoFalloCompra.sinSesion);
+    }
+
+    try {
+      final resultado = await _supabase.rpc('fn_reclamar_sobre_anuncio', params: {
+        'p_sobre_id': sobreId,
+        'p_limite_diario': limiteDiario,
+      }) as Map<String, dynamic>;
+
+      final ok = resultado['ok'] == true;
+      if (ok) {
+        _comprasRecientesPorSobre[sobreId] = (_comprasRecientesPorSobre[sobreId] ?? 0) + 1;
+        notifyListeners();
+        return ResultadoCompraSobre(ok: true);
+      }
+
+      final proximaCruda = resultado['proxima_disponible'];
+      final proxima = proximaCruda != null ? DateTime.tryParse('$proximaCruda') : null;
+      if (proxima != null) _proximaDisponiblePorSobre[sobreId] = proxima;
+      final cantidad = (resultado['compras_ultimas_24h'] as num?)?.toInt();
+      if (cantidad != null) _comprasRecientesPorSobre[sobreId] = cantidad;
+      notifyListeners();
+      return ResultadoCompraSobre(ok: false, motivo: MotivoFalloCompra.limiteDiario, proximaDisponible: proxima);
+    } catch (e) {
+      debugPrint('Error al reclamar sobre por anuncio: $e');
+      return ResultadoCompraSobre(ok: false, motivo: MotivoFalloCompra.error);
     }
   }
 
@@ -278,7 +397,19 @@ class PerfilProvider extends ChangeNotifier {
     _recompensaDiariaDisponible = false;
     _pity = {};
     _sobresPendientes = {};
+    _comprasRecientesPorSobre = {};
+    _proximaDisponiblePorSobre = {};
     _error = null;
     notifyListeners();
   }
+}
+
+enum MotivoFalloCompra { sinDinero, limiteDiario, sinSesion, error }
+
+class ResultadoCompraSobre {
+  final bool ok;
+  final MotivoFalloCompra? motivo;
+  final DateTime? proximaDisponible;
+
+  ResultadoCompraSobre({required this.ok, this.motivo, this.proximaDisponible});
 }

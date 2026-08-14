@@ -15,6 +15,8 @@ const List<Map<String, String>> _rarezas = [
   {'valor': 'normal', 'etiqueta': 'NORMAL'},
   {'valor': 'icono', 'etiqueta': 'ICONO'},
   {'valor': 'heroe', 'etiqueta': 'HEROE'},
+  {'valor': 'tos1', 'etiqueta': 'TOS1'},
+  {'valor': 'tos2', 'etiqueta': 'TOS2'},
 ];
 
 const List<double> _kMatrizGris = <double>[

@@ -378,7 +378,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
 
     bool companerosDeRegion(Map<String, dynamic> j) {
       if (identical(j, carta)) return false;
-      if (_esIcono(j)) return true;
       if (soyHeroe) return _region(j) == region;
       return _region(j) == region || (_esHeroe(j) && _region(j) == region);
     }
@@ -392,7 +391,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
       final equipo = _equipo(carta);
       bool companerosDeEquipo(Map<String, dynamic> j) {
         if (identical(j, carta)) return false;
-        if (_esIcono(j)) return true;
         if (_esHeroe(j)) return _region(j) == region;
         return _equipo(j) == equipo;
       }
@@ -402,7 +400,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     final pais = _pais(carta);
     bool companerosDePais(Map<String, dynamic> j) {
       if (identical(j, carta)) return false;
-      if (_esIcono(j)) return true;
       return _pais(j) == pais;
     }
     if (pais.isNotEmpty && roster.any(companerosDePais)) objetivos += 1;
@@ -1786,7 +1783,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
   Widget _puntitosQuimica(int valor) {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(_quimicaObjetivosMax, (i) {
+      children: List.generate(3, (i) {
         final activo = i < valor;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 1.5),

@@ -83,7 +83,6 @@ Future<void> confirmarYCerrarSesion(BuildContext context) async {
   );
 }
 
-/// [confirmarYCerrarSesion].
 class BotonCerrarSesion extends StatelessWidget {
   const BotonCerrarSesion({super.key});
 

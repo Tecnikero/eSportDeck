@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:collection/collection.dart';
 import 'package:provider/provider.dart';
 import 'sobre_detalle_screenv.dart';
 import '../providers/perfil_provider.dart';
@@ -24,13 +25,28 @@ const List<Map<String, dynamic>> _tramosPlata = [
   {'min': 89, 'max': 99, 'peso': 0, 'efecto': 'dorado'},
 ];
 const List<Map<String, dynamic>> _tramosespecial = [
-  {'min': 79, 'max': 82, 'peso': 0, 'efecto': 'ninguno'},
-  {'min': 83, 'max': 87, 'peso': 0, 'efecto': 'plata'},
-  {'min': 88, 'max': 91, 'peso': 50, 'efecto': 'violeta'},
-  {'min': 92, 'max': 99, 'peso': 50, 'efecto': 'dorado'},
+  {'min': 72, 'max': 82, 'peso': 60, 'efecto': 'ninguno'},
+  {'min': 83, 'max': 87, 'peso': 35, 'efecto': 'plata'},
+  {'min': 88, 'max': 91, 'peso': 15, 'efecto': 'violeta'},
+  {'min': 92, 'max': 99, 'peso': 10, 'efecto': 'dorado'},
 ];
 
 const List<Map<String, dynamic>> tiposSobre = [
+  {
+    'id': 'gratis_anuncio',
+    'nombre': 'Sobre Gratis',
+    'precio': 0,
+    'cantidad_cartas': 2,
+    'icono': Icons.play_circle_outline,
+    'imagen': 'assets/valorant/sobres/sobre_ad.png',
+    'color': Color(0xFF4A90D9),
+    'rarezas': ['Normal', 'icono', 'heroe', 'tos1', 'tos2'],
+    'tramos': _tramosPremium,
+    'garantia': false,
+    'requiere_anuncio': true,
+    'limite_diario': 1,
+    'descripcion': 'Mira un anuncio y llévate 2 cartas gratis.',
+  },
   {
     'id': 'basico',
     'nombre': 'Sobre Básico',
@@ -56,7 +72,28 @@ const List<Map<String, dynamic>> tiposSobre = [
     'tramos': _tramosPlata,
     'garantia': false,
     'descripcion': '2 cartas aleatorias de plata del catálogo.',
-  }
+  },
+  {
+    'id': 'tos_asegurado',
+    'nombre': 'Sobre Team Of Stage',
+    'precio': 4500,
+    'cantidad_cartas': 2,
+    'icono': Icons.emoji_events,
+    'imagen': 'assets/valorant/sobres/sobre_tos.png',
+    'color': Color(0xFF4A90D9),
+    'rarezas': ['Normal', 'tos1', 'tos2',],
+    'tramos': _tramosespecial,
+    'peso_rarezas': {
+      'normal': 60,
+      'tos1': 20,
+      'tos2': 20,
+    },
+    'garantia_tipos': ['tos1', 'tos2'],
+    'garantia': false,
+    // Modular: null = sin límite. Poner un entero N = máximo N compras
+    'limite_diario': 1,
+    'descripcion': '2 cartas. Al menos 1 Team Of Stage garantizado.',
+  },
 ];
 
 const List<Map<String, dynamic>> _tramosPremium = [
@@ -80,7 +117,7 @@ const Map<String, Map<String, dynamic>> sobresGanables = {
     'icono': Icons.emoji_events,
     'imagen': 'assets/valorant/sobres/sobre_torneo.png',
     'color': Color(0xFF4A90D9),
-    'rarezas': ['Normal', 'icono', 'heroe'],
+    'rarezas': ['Normal', 'icono', 'heroe', 'tos1', 'tos2'],
     'tramos': _tramosPremium,
     'garantia': true,
     'descripcion':
@@ -204,30 +241,44 @@ class _TiendaScreenState extends State<TiendaScreen> {
   }
 
   Widget _vistaSobres() {
-    return ListView(
-      children: [
-        _bannerRacha(),
-        const SizedBox(height: 14),
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'DISPONIBLES HOY',
-            style: TextStyle(
-              color: Colors.white38,
-              fontSize: 11.5,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
+    return Consumer<PerfilProvider>(
+      builder: (context, perfil, _) {
+        final ordenados = [...tiposSobre];
+        mergeSort(ordenados, compare: (a, b) {
+          final limiteA = a['limite_diario'] as int?;
+          final limiteB = b['limite_diario'] as int?;
+          final disponibleA = perfil.puedeComprar(a['id'] as String, limiteA);
+          final disponibleB = perfil.puedeComprar(b['id'] as String, limiteB);
+          if (disponibleA == disponibleB) return 0;
+          return disponibleA ? -1 : 1;
+        });
+
+        return ListView(
+          children: [
+            _bannerRacha(),
+            const SizedBox(height: 14),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'DISPONIBLES HOY',
+                style: TextStyle(
+                  color: Colors.white38,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
             ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        ...tiposSobre.map(
-          (sobre) => Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: _tarjetaSobre(sobre),
-          ),
-        ),
-      ],
+            const SizedBox(height: 10),
+            ...ordenados.map(
+              (sobre) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: _tarjetaSobre(sobre),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -464,7 +515,15 @@ class _TiendaScreenState extends State<TiendaScreen> {
   }
 
   Widget _tarjetaSobre(Map<String, dynamic> sobre) {
-    return _panelMetalico(
+    final limiteDiario = sobre['limite_diario'] as int?;
+
+    return Consumer<PerfilProvider>(
+      builder: (context, perfil, _) {
+        final sobreId = sobre['id'] as String;
+        final disponible = perfil.puedeComprar(sobreId, limiteDiario);
+        final restante = disponible ? null : perfil.tiempoRestante(sobreId);
+
+        return _panelMetalico(
       borderRadius: 18,
       onTap: () async {
         final resultado = await Navigator.push<bool>(
@@ -494,22 +553,45 @@ class _TiendaScreenState extends State<TiendaScreen> {
                     style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.3),
                   ),
                   const SizedBox(height: 4),
+                  if (limiteDiario != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      disponible
+                          ? 'Disponible ($limiteDiario por día)'
+                          : 'Ya lo compraste hoy · vuelve en ${_formatearDuracion(restante)}',
+                      style: TextStyle(
+                        color: disponible ? _kDorado : Colors.white38,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(30),
-                      gradient: const LinearGradient(colors: [_kPlata, _kPlataOscuro]),
+                      gradient: LinearGradient(colors: disponible
+                          ? [_kPlata, _kPlataOscuro]
+                          : [Colors.white24, Colors.white12]),
                       border: Border.all(color: Colors.white.withOpacity(0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.monetization_on, color: Color(0xFF17181B), size: 15),
+                        Icon(
+                          sobre['requiere_anuncio'] == true
+                              ? Icons.play_circle_outline
+                              : Icons.monetization_on,
+                          color: const Color(0xFF17181B),
+                          size: 15,
+                        ),
                         const SizedBox(width: 5),
-                        Text('${sobre['precio']}',
-                            style: const TextStyle(
-                                color: Color(0xFF17181B), fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text(
+                          sobre['requiere_anuncio'] == true ? 'GRATIS' : '${sobre['precio']}',
+                          style: const TextStyle(
+                              color: Color(0xFF17181B), fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
                       ],
                     ),
                   ),
@@ -531,6 +613,16 @@ class _TiendaScreenState extends State<TiendaScreen> {
         ),
       ),
     );
+      },
+    );
+  }
+
+  String _formatearDuracion(Duration? d) {
+    if (d == null) return '...';
+    final horas = d.inHours;
+    final minutos = d.inMinutes.remainder(60);
+    if (horas > 0) return '${horas}h ${minutos}m';
+    return '${d.inMinutes.clamp(1, 59)}m';
   }
 
 }

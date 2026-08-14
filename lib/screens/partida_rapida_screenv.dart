@@ -387,13 +387,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     for (final compa in roster) {
       if (identical(compa, carta)) continue;
 
-      if (_esIcono(compa)) {
-        matchPais = true;
-        matchRegion = true;
-        matchEquipo = true;
-        continue;
-      }
-
       if (miPais.isNotEmpty && miPais == _pais(compa)) matchPais = true;
 
       if (soyHeroe) {

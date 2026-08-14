@@ -34,6 +34,8 @@ class CartaWidget extends StatelessWidget {
   static const Map<String, String> _fondosPorRareza = {
     'icono': 'assets/valorant/cartas/carta_icono.png',
     'heroe': 'assets/valorant/cartas/carta_heroe.png',
+    'tos1': 'assets/valorant/cartas/carta_tos1.png',
+    'tos2': 'assets/valorant/cartas/carta_tos2.png',
   };
 
   static const String _fondoNormalOro = 'assets/valorant/cartas/carta_normal_oro.png';

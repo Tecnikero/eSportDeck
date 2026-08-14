@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:provider/provider.dart';
 import 'screens/login_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -12,9 +13,11 @@ void main() async {
     url: 'https://ngcaeweklrqrprhqmdxw.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nY2Fld2VrbHJxcnByaHFtZHh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzMzA3ODgsImV4cCI6MjA5OTkwNjc4OH0.92lGbaD5MT28AccUWTtTxgOkQn_koRtOXZW3jAWR-xU',
   );
+  await MobileAds.instance.initialize();
   
   runApp(const MyApp());
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

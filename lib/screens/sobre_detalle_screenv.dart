@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/carta_widget.dart';
@@ -86,11 +87,110 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   List<Map<String, dynamic>> _cartasReveladas = [];
   String _fondoOcultoRuta = 'assets/valorant/cartas/carta_normal_plata.png';
 
+  bool get _requiereAnuncio => widget.sobre['requiere_anuncio'] == true;
+  RewardedAd? _anuncioRecompensado;
+  bool _cargandoAnuncio = false;
+  bool _recompensaGanada = false;
+
+  static const String _adUnitIdAnuncio = 'ca-app-pub-3940256099942544/5224354917';
+
+  void _cargarAnuncioRecompensado() {
+    if (!_requiereAnuncio || _cargandoAnuncio || _anuncioRecompensado != null) return;
+    _cargandoAnuncio = true;
+    RewardedAd.load(
+      adUnitId: _adUnitIdAnuncio,
+      request: const AdRequest(),
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) {
+          _anuncioRecompensado = ad;
+          _cargandoAnuncio = false;
+          if (mounted) setState(() {});
+        },
+        onAdFailedToLoad: (error) {
+          debugPrint('Error al cargar anuncio recompensado: $error');
+          _cargandoAnuncio = false;
+          if (mounted) setState(() => _error = 'No se pudo cargar el anuncio. Intenta de nuevo.');
+        },
+      ),
+    );
+  }
+
+  Future<void> _mostrarAnuncioYReclamar() async {
+    final anuncio = _anuncioRecompensado;
+    if (anuncio == null) {
+      setState(() => _error = 'El anuncio todavía no está listo. Espera un momento.');
+      _cargarAnuncioRecompensado();
+      return;
+    }
+
+    _recompensaGanada = false;
+    anuncio.fullScreenContentCallback = FullScreenContentCallback(
+      onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
+        _anuncioRecompensado = null;
+        if (_recompensaGanada) {
+          _reclamarSobrePorAnuncio();
+        } else {
+          if (mounted) {
+            setState(() => _error = 'Debes ver el anuncio completo para recibir el sobre.');
+          }
+          _cargarAnuncioRecompensado();
+        }
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        ad.dispose();
+        _anuncioRecompensado = null;
+        if (mounted) setState(() => _error = 'No se pudo mostrar el anuncio.');
+        _cargarAnuncioRecompensado();
+      },
+    );
+
+    await anuncio.show(
+      onUserEarnedReward: (ad, reward) {
+        _recompensaGanada = true;
+      },
+    );
+  }
+
+  Future<void> _reclamarSobrePorAnuncio() async {
+    setState(() {
+      _comprando = true;
+      _error = null;
+    });
+
+    final limiteDiario = widget.sobre['limite_diario'] as int? ?? 1;
+    final resultado = await context.read<PerfilProvider>().reclamarSobreAnuncio(
+          sobreId: _sobreId,
+          limiteDiario: limiteDiario,
+        );
+
+    if (!mounted) return;
+
+    if (resultado.ok) {
+      setState(() {
+        _comprando = false;
+        _comprado = true;
+      });
+      return;
+    }
+
+    setState(() {
+      _comprando = false;
+      _error = resultado.motivo == MotivoFalloCompra.limiteDiario
+          ? 'Ya reclamaste este sobre hoy. Vuelve más tarde.'
+          : 'No se pudo reclamar el sobre.';
+    });
+  }
+
   static const int _umbralOvrOroOculta = 79;
 
   static const Map<String, String> _fondosPorRarezaOculta = {
     'champions': 'assets/valorant/cartas/carta_champions.png',
     'finals_champions': 'assets/valorant/cartas/carta_finals_champions.png',
+    'icono': 'assets/valorant/cartas/carta_icono.png',
+    'heroe': 'assets/valorant/cartas/carta_heroe.png',
+    'tos1': 'assets/valorant/cartas/carta_tos1.png',
+    'tos2': 'assets/valorant/cartas/carta_tos2.png',
   };
 
   String _rutaFondoParaCarta(Map<String, dynamic> jugador) {
@@ -179,6 +279,9 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
 
     _cargarImagenLogo();
     _cargarPity();
+    if (_requiereAnuncio && !widget.esPendiente) {
+      _cargarAnuncioRecompensado();
+    }
   }
 
   @override
@@ -188,6 +291,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     _efecto.dispose();
     _rasgado.dispose();
     _revelado.dispose();
+    _anuncioRecompensado?.dispose();
     super.dispose();
   }
 
@@ -201,7 +305,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   }
 
   static const Map<String, int> _pesoPorTipoPorDefecto = {
-    'normal': 100,
+    'normal': 70,
     'heroe': 30,
     'icono': 8,
     'champions': 15,
@@ -234,6 +338,68 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       roll -= pesos[i];
     }
     return candidatos.last;
+  }
+
+  Map<String, int> get _pesoRareza {
+    final crudo = widget.sobre['peso_rarezas'];
+    if (crudo is Map) {
+      return crudo.map((k, v) => MapEntry('$k'.toLowerCase(), (v as num).toInt()));
+    }
+    return const {};
+  }
+
+  Set<String> get _tiposGarantia {
+    final crudo = widget.sobre['garantia_tipos'];
+    if (crudo is List) return crudo.map((e) => '$e'.toLowerCase()).toSet();
+    return const {};
+  }
+
+  String _tipoDeJugador(Map<String, dynamic> jugador) =>
+      '${jugador['rareza'] ?? 'normal'}'.toLowerCase().replaceAll(' ', '_');
+
+  Map<String, dynamic> _elegirCarta(
+    List<Map<String, dynamic>> pool, {
+    Set<_EfectoRareza>? tramosPermitidos,
+    Set<String>? tiposPermitidos,
+  }) {
+    var poolFiltrado = pool;
+    if (tiposPermitidos != null) {
+      final filtrados =
+          pool.where((j) => tiposPermitidos.contains(_tipoDeJugador(j))).toList();
+      if (filtrados.isNotEmpty) poolFiltrado = filtrados;
+    }
+
+    final pesoRareza = _pesoRareza;
+    if (pesoRareza.isEmpty || tiposPermitidos != null) {
+      return _elegirCartaPonderada(poolFiltrado, tramosPermitidos: tramosPermitidos);
+    }
+
+    final gruposPorTipo = <String, List<Map<String, dynamic>>>{};
+    for (final j in poolFiltrado) {
+      gruposPorTipo.putIfAbsent(_tipoDeJugador(j), () => []).add(j);
+    }
+
+    final tiposDisponibles = gruposPorTipo.keys
+        .where((t) => (pesoRareza[t] ?? 0) > 0 && gruposPorTipo[t]!.isNotEmpty)
+        .toList();
+
+    if (tiposDisponibles.isEmpty) {
+      return _elegirCartaPonderada(poolFiltrado, tramosPermitidos: tramosPermitidos);
+    }
+
+    final pesoTotal = tiposDisponibles.fold<int>(0, (s, t) => s + (pesoRareza[t] ?? 0));
+    var roll = _random.nextInt(pesoTotal);
+    var tipoElegido = tiposDisponibles.last;
+    for (final t in tiposDisponibles) {
+      final peso = pesoRareza[t] ?? 0;
+      if (roll < peso) {
+        tipoElegido = t;
+        break;
+      }
+      roll -= peso;
+    }
+
+    return _elegirCartaPonderada(gruposPorTipo[tipoElegido]!, tramosPermitidos: tramosPermitidos);
   }
 
   Map<String, dynamic> _elegirCartaPonderada(
@@ -285,7 +451,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     _pityVioleta = huboVioletaOMejor ? 0 : _pityVioleta + elegidas.length;
 
     if (_pityVioleta >= _pityVioletaMax && !huboVioletaOMejor && poolRestante.isNotEmpty) {
-      elegidas[elegidas.length - 1] = _elegirCartaPonderada(
+      elegidas[elegidas.length - 1] = _elegirCarta(
         poolRestante,
         tramosPermitidos: {_EfectoRareza.violeta},
       );
@@ -302,15 +468,26 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
 
     for (var i = 0; i < cantidadCartas; i++) {
       if (poolDisponible.isEmpty) break;
-      final carta = _elegirCartaPonderada(poolDisponible);
+      final carta = _elegirCarta(poolDisponible);
       cartas.add(carta);
       poolDisponible = poolDisponible.where((j) => j['id'] != carta['id']).toList();
+    }
+
+    final tiposGarantia = _tiposGarantia;
+    if (tiposGarantia.isNotEmpty && cartas.isNotEmpty) {
+      final yaCumpleTipo = cartas.any((c) => tiposGarantia.contains(_tipoDeJugador(c)));
+      if (!yaCumpleTipo) {
+        cartas[cartas.length - 1] = _elegirCarta(
+          poolDisponible.isNotEmpty ? poolDisponible : poolCompleto,
+          tiposPermitidos: tiposGarantia,
+        );
+      }
     }
 
     if (_sobreGarantizado && cartas.isNotEmpty) {
       final yaCumpleGarantia = cartas.any((c) => _tramosGarantia.contains(_efectoDeCarta(c)));
       if (!yaCumpleGarantia) {
-        cartas[cartas.length - 1] = _elegirCartaPonderada(
+        cartas[cartas.length - 1] = _elegirCarta(
           poolDisponible.isNotEmpty ? poolDisponible : poolCompleto,
           tramosPermitidos: _tramosGarantia,
         );
@@ -346,27 +523,34 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     }
 
     try {
-      final userId = supabase.auth.currentUser?.id;
-      if (userId == null) throw Exception('No hay sesión activa.');
-
       final precio = widget.sobre['precio'] as int;
-      final perfil = await supabase.from('profiles').select('dinero').eq('id', userId).single();
-      final dineroActual = (perfil['dinero'] ?? 0) as int;
+      final limiteDiario = widget.sobre['limite_diario'] as int?;
 
-      if (dineroActual < precio) {
+      final resultado = await context.read<PerfilProvider>().comprarSobre(
+            sobreId: _sobreId,
+            precio: precio,
+            limiteDiario: limiteDiario,
+          );
+
+      if (!mounted) return;
+
+      if (resultado.ok) {
         setState(() {
-          _error = 'No tienes suficiente dinero para este sobre.';
           _comprando = false;
+          _comprado = true;
         });
         return;
       }
 
-      await supabase.from('profiles').update({'dinero': dineroActual - precio}).eq('id', userId);
-
-      if (!mounted) return;
       setState(() {
         _comprando = false;
-        _comprado = true;
+        _error = switch (resultado.motivo) {
+          MotivoFalloCompra.sinDinero => 'No tienes suficiente dinero para este sobre.',
+          MotivoFalloCompra.limiteDiario =>
+            'Ya alcanzaste el límite diario de este sobre. Vuelve más tarde.',
+          MotivoFalloCompra.sinSesion => 'No hay sesión activa.',
+          _ => 'No se pudo completar la compra.',
+        };
       });
     } catch (e) {
       debugPrint('ERROR AL COMPRAR SOBRE: $e');
@@ -1074,7 +1258,47 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
           if (_comprando)
             const CircularProgressIndicator(color: _kAcentoUI)
           else ...[
-            SizedBox(
+            Builder(builder: (context) {
+              final limiteDiario = sobre['limite_diario'] as int?;
+              final perfil = context.watch<PerfilProvider>();
+              final agotado = !widget.esPendiente &&
+                  !perfil.puedeComprar(_sobreId, limiteDiario);
+
+              if (agotado) {
+                final restante = perfil.tiempoRestante(_sobreId);
+                return Column(
+                  children: [
+                    Text(
+                      _requiereAnuncio
+                          ? 'Ya reclamaste este sobre hoy. Disponible en ${_formatearDuracionCompra(restante)}.'
+                          : 'Ya compraste este sobre hoy. Disponible en ${_formatearDuracionCompra(restante)}.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white54, fontSize: 13),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(15),
+                          color: Colors.white12,
+                          border: Border.all(color: Colors.white.withOpacity(0.15)),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'NO DISPONIBLE HOY',
+                            style: TextStyle(
+                                color: Colors.white38, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return SizedBox(
               width: double.infinity,
               height: 54,
               child: DecoratedBox(
@@ -1091,17 +1315,21 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                   color: Colors.transparent,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(15),
-                    onTap: _comprar,
+                    onTap: _requiereAnuncio ? _mostrarAnuncioYReclamar : _comprar,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          widget.esPendiente ? Icons.card_giftcard : Icons.monetization_on,
+                          _requiereAnuncio
+                              ? Icons.play_circle_outline
+                              : (widget.esPendiente ? Icons.card_giftcard : Icons.monetization_on),
                           color: const Color(0xFF17181B),
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          widget.esPendiente ? 'ABRIR' : 'ABRIR 1 (${sobre['precio']})',
+                          _requiereAnuncio
+                              ? 'VER ANUNCIO'
+                              : (widget.esPendiente ? 'ABRIR' : 'ABRIR 1 (${sobre['precio']})'),
                           style: const TextStyle(
                               color: Color(0xFF17181B), fontWeight: FontWeight.bold, fontSize: 16),
                         ),
@@ -1110,8 +1338,9 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                   ),
                 ),
               ),
-            ),
-            if (!widget.esPendiente) ...[
+              );
+            }),
+            if (!widget.esPendiente && sobre['limite_diario'] == null && !_requiereAnuncio) ...[
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
@@ -1853,6 +2082,14 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
         ),
       ],
     );
+  }
+
+  String _formatearDuracionCompra(Duration? d) {
+    if (d == null) return '...';
+    final horas = d.inHours;
+    final minutos = d.inMinutes.remainder(60);
+    if (horas > 0) return '${horas}h ${minutos}m';
+    return '${d.inMinutes.clamp(1, 59)}m';
   }
 }
 
