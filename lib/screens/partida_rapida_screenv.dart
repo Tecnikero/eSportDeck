@@ -5,8 +5,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/carta_widget.dart';
 import '../widgets/carta_mini_widget.dart';
 
-const List<String> _rolesPrincipales = ['DUE', 'INI', 'CON', 'CEN'];
-
 const Color _kFondo = Color(0xFF0A0A0A);
 const Color _kFondoPanel = Color(0xFF1A0E0E);
 const Color _kRojo = Color(0xFFE30425);
@@ -353,15 +351,6 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
       _opcionesActuales = [];
     });
     Navigator.of(context).pop();
-  }
-
-  void _reiniciarDraft() {
-    setState(() {
-      for (var i = 0; i < _casillas.length; i++) {
-        _casillas[i] = null;
-      }
-      _error = null;
-    });
   }
 
   String _rol(Map<String, dynamic> j) => '${j['posicion'] ?? ''}'.trim().toUpperCase();

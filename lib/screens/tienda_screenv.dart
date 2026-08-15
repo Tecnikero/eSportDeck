@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:collection/collection.dart';
 import 'package:provider/provider.dart';
 import 'sobre_detalle_screenv.dart';
 import '../providers/perfil_provider.dart';
@@ -32,46 +31,53 @@ const List<Map<String, dynamic>> _tramosespecial = [
 ];
 
 const List<Map<String, dynamic>> tiposSobre = [
-//  {
-//    'id': 'gratis_anuncio',
-//    'nombre': 'Sobre Gratis',
-//    'precio': 0,
-//    'cantidad_cartas': 2,
-//    'icono': Icons.play_circle_outline,
-//    'imagen': 'assets/valorant/sobres/sobre_ad.png',
-//    'color': Color(0xFF4A90D9),
-//    'rarezas': ['Normal', 'icono', 'heroe', 'tos1', 'tos2'],
-//    'tramos': _tramosPremium,
-//    'garantia': false,
-//    'requiere_anuncio': true,
-//    'limite_diario': 1,
-//    'descripcion': 'Mira un anuncio y llévate 2 cartas gratis.',
-//  },
   {
     'id': 'basico',
     'nombre': 'Sobre Básico',
     'precio': 1000,
-    'cantidad_cartas': 2,
+    'cantidad_cartas': 3,
     'icono': Icons.style_outlined,
     'imagen': 'assets/valorant/sobres/sobre_normal.png',
     'color': Color(0xFF4A90D9),
-    'rarezas': ['Normal'],
+    'rarezas': ['Normal', 'icono', 'heroe'],
     'tramos': _tramosBasico,
+    'peso_rarezas': <String, int>{},
+    'garantia_tipos': <String>[],
     'garantia': false,
-    'descripcion': '2 cartas aleatorias de oro del catálogo.',
+    'limite_diario': null,
+    'descripcion': '3 cartas aleatorias de oro del catálogo.',
   },
   {
     'id': 'plata',
     'nombre': 'Sobre Plata',
     'precio': 500,
-    'cantidad_cartas': 2,
+    'cantidad_cartas': 3,
     'icono': Icons.style_outlined,
     'imagen': 'assets/valorant/sobres/sobre_plata.png',
     'color': Color(0xFF4A90D9),
     'rarezas': ['Normal'],
     'tramos': _tramosPlata,
+    'peso_rarezas': <String, int>{},
+    'garantia_tipos': <String>[],
     'garantia': false,
-    'descripcion': '2 cartas aleatorias de plata del catálogo.',
+    'limite_diario': null,
+    'descripcion': '3 cartas aleatorias de plata del catálogo.',
+  },
+  {
+    'id': 'especial',
+    'nombre': 'Sobre especial',
+    'precio': 1500,
+    'cantidad_cartas': 2,
+    'icono': Icons.emoji_events,
+    'imagen': 'assets/valorant/sobres/sobre_especial.png',
+    'color': Color(0xFF4A90D9),
+    'rarezas': ['Normal', 'icono', 'heroe', 'tos1', 'tos2', 'flashback', 'promesa'],
+    'tramos': _tramosBasico,
+    'peso_rarezas': <String, int>{},
+    'garantia_tipos': <String>[],
+    'garantia': false,
+    'limite_diario': 5,
+    'descripcion': '2 cartas. Puede salir cualquier carta.',
   },
   {
     'id': 'tos_asegurado',
@@ -81,7 +87,7 @@ const List<Map<String, dynamic>> tiposSobre = [
     'icono': Icons.emoji_events,
     'imagen': 'assets/valorant/sobres/sobre_tos.png',
     'color': Color(0xFF4A90D9),
-    'rarezas': ['Normal', 'tos1', 'tos2',],
+    'rarezas': ['Normal', 'icono', 'heroe', 'tos1', 'tos2', 'flashback', 'promesa'],
     'tramos': _tramosespecial,
     'peso_rarezas': {
       'normal': 60,
@@ -90,7 +96,6 @@ const List<Map<String, dynamic>> tiposSobre = [
     },
     'garantia_tipos': ['tos1', 'tos2'],
     'garantia': false,
-    // Modular: null = sin límite. Poner un entero N = máximo N compras
     'limite_diario': 1,
     'descripcion': '2 cartas. Al menos 1 Team Of Stage garantizado.',
   },
@@ -117,9 +122,12 @@ const Map<String, Map<String, dynamic>> sobresGanables = {
     'icono': Icons.emoji_events,
     'imagen': 'assets/valorant/sobres/sobre_torneo.png',
     'color': Color(0xFF4A90D9),
-    'rarezas': ['Normal', 'icono', 'heroe', 'tos1', 'tos2'],
+    'rarezas': ['Normal', 'icono', 'heroe', 'tos1', 'tos2', 'flashback', 'promesa'],
     'tramos': _tramosPremium,
+    'peso_rarezas': <String, int>{},
+    'garantia_tipos': <String>[],
     'garantia': true,
+    'limite_diario': null,
     'descripcion':
         '2 cartas con mucha mejor probabilidad de rareza alta.\nSe gana siendo campeón del Torneo.',
   },
@@ -244,7 +252,7 @@ class _TiendaScreenState extends State<TiendaScreen> {
     return Consumer<PerfilProvider>(
       builder: (context, perfil, _) {
         final ordenados = [...tiposSobre];
-        mergeSort(ordenados, compare: (a, b) {
+        ordenados.sort((a, b) {
           final limiteA = a['limite_diario'] as int?;
           final limiteB = b['limite_diario'] as int?;
           final disponibleA = perfil.puedeComprar(a['id'] as String, limiteA);

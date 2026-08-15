@@ -95,9 +95,8 @@ class _Encabezado extends StatelessWidget {
 class _BotonPrincipal extends StatelessWidget {
   final String texto;
   final VoidCallback? onPressed;
-  final Color color;
 
-  const _BotonPrincipal({required this.texto, required this.onPressed, this.color = _kRojo});
+  const _BotonPrincipal({required this.texto, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +106,7 @@ class _BotonPrincipal extends StatelessWidget {
       height: 54,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: color,
+          backgroundColor: _kRojo,
           disabledBackgroundColor: Colors.white12,
           elevation: activo ? 4 : 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -361,8 +360,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
   String _rareza(Map<String, dynamic> j) => '${j['rareza'] ?? 'normal'}'.trim().toLowerCase().replaceAll(' ', '_');
   bool _esIcono(Map<String, dynamic> j) => _rareza(j) == 'icono';
   bool _esHeroe(Map<String, dynamic> j) => _rareza(j) == 'heroe';
-
-  static const int _quimicaObjetivosMax = 4;
 
   int _quimicaEnRoster(Map<String, dynamic> carta, List<Map<String, dynamic>> roster) {
     if (_esIcono(carta)) return 3;

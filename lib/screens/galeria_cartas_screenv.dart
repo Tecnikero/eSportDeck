@@ -15,6 +15,8 @@ const List<Map<String, String>> _rarezas = [
   {'valor': 'normal', 'etiqueta': 'NORMAL'},
   {'valor': 'icono', 'etiqueta': 'ICONO'},
   {'valor': 'heroe', 'etiqueta': 'HEROE'},
+  {'valor': 'flashback', 'etiqueta': 'FLASHBACK'},
+  {'valor': 'promesa', 'etiqueta': 'PROMESA'},
   {'valor': 'tos1', 'etiqueta': 'TOS1'},
   {'valor': 'tos2', 'etiqueta': 'TOS2'},
 ];
@@ -41,11 +43,19 @@ class _GaleriaCartasScreenState extends State<GaleriaCartasScreen> {
   bool _seleccionadaPoseida = false;
 
   String _rarezaFiltro = 'todas';
+  String _nombreFiltro = '';
+  final TextEditingController _nombreController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _future = _cargarGaleria();
+  }
+
+  @override
+  void dispose() {
+    _nombreController.dispose();
+    super.dispose();
   }
 
   Future<_DatosGaleria> _cargarGaleria() async {
@@ -74,11 +84,20 @@ class _GaleriaCartasScreenState extends State<GaleriaCartasScreen> {
   }
 
   List<Map<String, dynamic>> _aplicarFiltro(List<Map<String, dynamic>> cartas) {
-    if (_rarezaFiltro == 'todas') return cartas;
-    return cartas.where((c) {
-      final rareza = '${c['rareza'] ?? 'normal'}'.toLowerCase().replaceAll(' ', '_');
-      return rareza == _rarezaFiltro;
-    }).toList();
+    var resultado = cartas;
+    if (_rarezaFiltro != 'todas') {
+      resultado = resultado.where((c) {
+        final rareza = '${c['rareza'] ?? 'normal'}'.toLowerCase().replaceAll(' ', '_');
+        return rareza == _rarezaFiltro;
+      }).toList();
+    }
+    final nombreBuscado = _nombreFiltro.trim().toLowerCase();
+    if (nombreBuscado.isNotEmpty) {
+      resultado = resultado
+          .where((c) => '${c['nombre'] ?? ''}'.toLowerCase().contains(nombreBuscado))
+          .toList();
+    }
+    return resultado;
   }
 
   @override
@@ -120,6 +139,8 @@ class _GaleriaCartasScreenState extends State<GaleriaCartasScreen> {
                   children: [
                     _buildProgreso(descubiertas, total, progreso),
                     const SizedBox(height: 14),
+                    _buildBuscadorNombre(),
+                    const SizedBox(height: 10),
                     _buildFiltrosRareza(),
                     const SizedBox(height: 14),
                     if (cartasFiltradas.isEmpty)
@@ -206,6 +227,43 @@ class _GaleriaCartasScreenState extends State<GaleriaCartasScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBuscadorNombre() {
+    return TextField(
+      controller: _nombreController,
+      style: const TextStyle(color: Colors.white, fontSize: 13.5),
+      onChanged: (valor) => setState(() => _nombreFiltro = valor),
+      decoration: InputDecoration(
+        hintText: 'Buscar carta por nombre...',
+        hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+        prefixIcon: const Icon(Icons.search, color: Colors.white54, size: 20),
+        suffixIcon: _nombreFiltro.isEmpty
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.close, color: Colors.white54, size: 18),
+                onPressed: () => setState(() {
+                  _nombreController.clear();
+                  _nombreFiltro = '';
+                }),
+              ),
+        filled: true,
+        fillColor: _kFondoPanel,
+        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: _kDorado, width: 1.2),
         ),
       ),
     );

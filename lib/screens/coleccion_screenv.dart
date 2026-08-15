@@ -8,7 +8,6 @@ import '../providers/perfil_provider.dart';
 
 enum _OrdenOvr { ninguno, descendente, ascendente }
 
-const Color _kFondo = Color(0xFF0B0C10);
 const Color _kDorado = Color(0xFFD9B65C);
 const Color _kFondoPanel = Color(0xFF1C1E22);
 const Color _kPlata = Color(0xFFC7CBD1);
@@ -29,6 +28,8 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
   String? _regionFiltro;
   String? _equipoFiltro;
   String? _paisFiltro;
+  String _nombreFiltro = '';
+  final TextEditingController _nombreController = TextEditingController();
   _OrdenOvr _ordenOvr = _OrdenOvr.ninguno;
 
   bool _regionExpandida = false;
@@ -41,6 +42,12 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
   void initState() {
     super.initState();
     _futureJugadores = _cargarJugadores();
+  }
+
+  @override
+  void dispose() {
+    _nombreController.dispose();
+    super.dispose();
   }
 
   Future<List<Map<String, dynamic>>> _cargarJugadores() async {
@@ -344,10 +351,16 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
   }
 
   List<Map<String, dynamic>> _aplicarFiltros(List<Map<String, dynamic>> jugadores) {
+    final nombreBuscado = _nombreFiltro.trim().toLowerCase();
+
     var resultado = jugadores.where((j) {
       if (_regionFiltro != null && _regionDe(j) != _regionFiltro) return false;
       if (_equipoFiltro != null && _equipoDe(j) != _equipoFiltro) return false;
       if (_paisFiltro != null && _paisDe(j) != _paisFiltro) return false;
+      if (nombreBuscado.isNotEmpty &&
+          !'${j['nombre'] ?? ''}'.toLowerCase().contains(nombreBuscado)) {
+        return false;
+      }
       return true;
     }).toList();
 
@@ -431,6 +444,44 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 6),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: TextField(
+                        controller: _nombreController,
+                        style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                        onChanged: (valor) => setState(() => _nombreFiltro = valor),
+                        decoration: InputDecoration(
+                          hintText: 'Buscar carta por nombre...',
+                          hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                          prefixIcon: const Icon(Icons.search, color: Colors.white54, size: 20),
+                          suffixIcon: _nombreFiltro.isEmpty
+                              ? null
+                              : IconButton(
+                                  icon: const Icon(Icons.close, color: Colors.white54, size: 18),
+                                  onPressed: () => setState(() {
+                                    _nombreController.clear();
+                                    _nombreFiltro = '';
+                                  }),
+                                ),
+                          filled: true,
+                          fillColor: _kFondoPanel,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: _kDorado, width: 1.2),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8.0),
                       child: Row(
@@ -539,9 +590,9 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                           : GridView.builder(
                         itemCount: jugadoresFiltrados.length,
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 15,
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 12,
                           childAspectRatio: 626 / 794,
                         ),
                         itemBuilder: (context, index) {
@@ -558,7 +609,7 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                                     top: -6,
                                     right: -6,
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                                       decoration: BoxDecoration(
                                         color: const Color(0xFFFFD700),
                                         borderRadius: BorderRadius.circular(20),
@@ -569,7 +620,7 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                                         style: const TextStyle(
                                           color: Colors.black,
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 12,
+                                          fontSize: 10,
                                         ),
                                       ),
                                     ),

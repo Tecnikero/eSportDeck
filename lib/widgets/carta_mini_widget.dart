@@ -24,6 +24,8 @@ class CartaMiniWidget extends StatelessWidget {
     'heroe': 'assets/valorant/cartas/carta_heroe_mini.png',
     'tos1': 'assets/valorant/cartas/carta_tos_mini.png',
     'tos2': 'assets/valorant/cartas/carta_tos_mini.png',
+    'flashback': 'assets/valorant/cartas/carta_flashback_mini.png',
+    'promesa': 'assets/valorant/cartas/carta_promesa_mini.png',
   };
 
   static const String _fondoNormalOroMini = 'assets/valorant/cartas/carta_normal_oro_mini.png';

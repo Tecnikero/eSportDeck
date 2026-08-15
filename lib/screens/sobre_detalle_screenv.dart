@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/carta_widget.dart';
+import '../widgets/carta_mini_widget.dart';
 import '../providers/perfil_provider.dart';
 
 enum _EfectoRareza { ninguno, plata, violeta, dorado }
@@ -85,6 +86,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   String? _error;
   List<Map<String, dynamic>> _cartasReveladas = [];
   String _fondoOcultoRuta = 'assets/valorant/cartas/carta_normal_plata.png';
+  Map<String, dynamic>? _cartaAmpliada;
 
   bool get _requiereAnuncio => widget.sobre['requiere_anuncio'] == true;
 
@@ -127,6 +129,8 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     'heroe': 'assets/valorant/cartas/carta_heroe.png',
     'tos1': 'assets/valorant/cartas/carta_tos1.png',
     'tos2': 'assets/valorant/cartas/carta_tos2.png',
+    'flashback': 'assets/valorant/cartas/carta_flashback.png',
+    'promesa': 'assets/valorant/cartas/carta_promesa.png',
   };
 
   String _rutaFondoParaCarta(Map<String, dynamic> jugador) {
@@ -1926,6 +1930,33 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
   }
 
   Widget _buildCartasReveladas() {
+    return Stack(
+      children: [
+        _buildContenidoCartasReveladas(),
+        if (_cartaAmpliada != null) _buildOverlayCartaAmpliada(),
+      ],
+    );
+  }
+
+  Widget _buildOverlayCartaAmpliada() {
+    return Positioned.fill(
+      child: GestureDetector(
+        onTap: () => setState(() => _cartaAmpliada = null),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          color: Colors.black.withOpacity(0.85),
+          child: Center(
+            child: CartaWidget(
+              jugador: _cartaAmpliada!,
+              width: MediaQuery.of(context).size.width * 0.82,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContenidoCartasReveladas() {
     Map<String, dynamic>? mejor;
     for (final carta in _cartasReveladas) {
       if (mejor == null || ((carta['ovr'] ?? 0) as num) > ((mejor['ovr'] ?? 0) as num)) {
@@ -1975,6 +2006,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
             ),
             itemBuilder: (context, index) {
               final delay = index * 150;
+              final carta = _cartasReveladas[index];
               return TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0.0, end: 1.0),
                 duration: const Duration(milliseconds: 600),
@@ -1989,7 +2021,10 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                     ),
                   );
                 },
-                child: CartaWidget(jugador: _cartasReveladas[index]),
+                child: GestureDetector(
+                  onTap: () => setState(() => _cartaAmpliada = carta),
+                  child: CartaMiniWidget(jugador: carta),
+                ),
               );
             },
           ),

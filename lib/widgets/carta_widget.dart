@@ -36,6 +36,8 @@ class CartaWidget extends StatelessWidget {
     'heroe': 'assets/valorant/cartas/carta_heroe.png',
     'tos1': 'assets/valorant/cartas/carta_tos1.png',
     'tos2': 'assets/valorant/cartas/carta_tos2.png',
+    'flashback': 'assets/valorant/cartas/carta_flashback.png',
+    'promesa': 'assets/valorant/cartas/carta_promesa.png',
   };
 
   static const String _fondoNormalOro = 'assets/valorant/cartas/carta_normal_oro.png';
