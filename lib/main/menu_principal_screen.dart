@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'main_nav_screenv.dart';
-import '../widgets/sesion_dialog.dart';
+import '../valorant/screens/main_nav_screenv.dart';
+import '../valorant/widgets/sesion_dialog.dart';
 
 class MenuPrincipalScreen extends StatelessWidget {
   const MenuPrincipalScreen({super.key});

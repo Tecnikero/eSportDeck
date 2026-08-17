@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/perfil_provider.dart';
-import '../screens/login_screen.dart';
+import '../../main/login_screen.dart';
 
 const Color _kDorado = Color(0xFFFFD700);
 const Color _kFondoPanel = Color(0xFF11172A);

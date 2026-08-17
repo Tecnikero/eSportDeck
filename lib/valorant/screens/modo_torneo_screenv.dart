@@ -5,13 +5,11 @@ import 'package:provider/provider.dart';
 import '../widgets/carta_widget.dart';
 import '../providers/perfil_provider.dart';
 import 'torneo_partido_screenv.dart';
+import '../core/tema_juego.dart';
 
-const Color _kFondo = Color(0xFF0A0A0A);
-const Color _kFondoPanel = Color(0xFF1A0E0E);
-const Color _kRojo = Color(0xFFE30425);
-const Color _kDorado = Color(0xFFFFD700);
 const Color _kAzulUpper = Color(0xFF3B82F6);
 const Color _kMoradoLower = Color(0xFF9B59B6);
+
 
 const int _rondasParaGanar = 5;
 const int _premioMonedas = 2500;
@@ -239,7 +237,7 @@ class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
   Widget build(BuildContext context) {
     final equipoCompleto = _titulares.length == 5;
     return Scaffold(
-      backgroundColor: _kFondo,
+      backgroundColor: TemaJuego.fondo,
       appBar: AppBar(
         title: const Text('DRAFT · TORNEO',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
@@ -247,12 +245,12 @@ class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
         elevation: 0,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(2),
-          child: Container(height: 2, color: _kRojo),
+          child: Container(height: 2, color: TemaJuego.rojo),
         ),
       ),
       body: SafeArea(
         child: _cargando
-            ? const Center(child: CircularProgressIndicator(color: _kDorado))
+            ? const Center(child: CircularProgressIndicator(color: TemaJuego.dorado))
             : Column(
                 children: [
                   const SizedBox(height: 10),
@@ -260,7 +258,7 @@ class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
                     child: Row(
                       children: [
-                        const Icon(Icons.emoji_events, color: _kDorado, size: 22),
+                        const Icon(Icons.emoji_events, color: TemaJuego.dorado, size: 22),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -274,7 +272,7 @@ class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
                   if (_error != null)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-                      child: Text(_error!, style: const TextStyle(color: _kRojo), textAlign: TextAlign.center),
+                      child: Text(_error!, style: const TextStyle(color: TemaJuego.rojo), textAlign: TextAlign.center),
                     ),
                   const SizedBox(height: 14),
                   Expanded(
@@ -300,7 +298,7 @@ class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
                   height: 52,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: equipoCompleto ? _kRojo : Colors.white12,
+                      backgroundColor: equipoCompleto ? TemaJuego.rojo : Colors.white12,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     onPressed: equipoCompleto ? _confirmar : null,
@@ -327,7 +325,7 @@ class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
             ? Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: [BoxShadow(color: _kDorado.withOpacity(0.35), blurRadius: 8)],
+                  boxShadow: [BoxShadow(color: TemaJuego.dorado.withOpacity(0.35), blurRadius: 8)],
                 ),
                 child: CartaWidget(jugador: carta, width: 100),
               )
@@ -335,7 +333,7 @@ class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
                 aspectRatio: 626 / 794,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: _kFondoPanel,
+                    color: TemaJuego.fondoPanel,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.white12, width: 1.5),
                   ),
@@ -344,7 +342,7 @@ class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(color: _kRojo, strokeWidth: 2),
+                            child: CircularProgressIndicator(color: TemaJuego.rojo, strokeWidth: 2),
                           )
                         : Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -354,10 +352,10 @@ class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
                                 height: 36,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: _kRojo.withOpacity(0.12),
-                                  border: Border.all(color: _kRojo.withOpacity(0.5)),
+                                  color: TemaJuego.rojo.withOpacity(0.12),
+                                  border: Border.all(color: TemaJuego.rojo.withOpacity(0.5)),
                                 ),
-                                child: Icon(Icons.add, color: _kRojo.withOpacity(0.9), size: 20),
+                                child: Icon(Icons.add, color: TemaJuego.rojo.withOpacity(0.9), size: 20),
                               ),
                               const SizedBox(height: 6),
                               Text(
@@ -411,14 +409,14 @@ class _SelectorCartasTorneoSheetState extends State<_SelectorCartasTorneoSheet> 
         16, 20, 16, 30 + MediaQuery.of(context).padding.bottom,
       ),
       decoration: BoxDecoration(
-        color: _kFondoPanel,
+        color: TemaJuego.fondoPanel,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border.all(color: _kRojo, width: 1.5),
+        border: Border.all(color: TemaJuego.rojo, width: 1.5),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.emoji_events, color: _kRojo, size: 28),
+          const Icon(Icons.emoji_events, color: TemaJuego.rojo, size: 28),
           const SizedBox(height: 6),
           const Text(
             'ELIGE TU JUGADOR',
@@ -467,7 +465,7 @@ class _SelectorCartasTorneoSheetState extends State<_SelectorCartasTorneoSheet> 
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: _kRojo.withOpacity(0.5), width: 1.5),
+              border: Border.all(color: TemaJuego.rojo.withOpacity(0.5), width: 1.5),
             ),
             child: SizedBox(
               width: ancho,
@@ -771,7 +769,7 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: _kFondoPanel,
+          backgroundColor: TemaJuego.fondoPanel,
           title: const Text('Hubo un problema al entregar el premio', style: TextStyle(color: Colors.white)),
           content: SingleChildScrollView(
             child: SelectableText(
@@ -785,7 +783,7 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cerrar', style: TextStyle(color: _kDorado)),
+              child: const Text('Cerrar', style: TextStyle(color: TemaJuego.dorado)),
             ),
           ],
         ),
@@ -798,14 +796,14 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
-        backgroundColor: _kFondoPanel,
+        backgroundColor: TemaJuego.fondoPanel,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
           padding: const EdgeInsets.all(22),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.close, color: _kRojo, size: 44),
+              const Icon(Icons.close, color: TemaJuego.rojo, size: 44),
               const SizedBox(height: 10),
               const Text('Eliminado del torneo',
                   style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900),
@@ -819,7 +817,7 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
                 height: 46,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _kRojo,
+                    backgroundColor: TemaJuego.rojo,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () {
@@ -842,7 +840,7 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
-        backgroundColor: _kFondoPanel,
+        backgroundColor: TemaJuego.fondoPanel,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -850,7 +848,7 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(_usuarioCampeon ? Icons.emoji_events : Icons.military_tech,
-                  color: _kDorado, size: 52),
+                  color: TemaJuego.dorado, size: 52),
               const SizedBox(height: 10),
               Text(
                 _usuarioCampeon ? '¡CAMPEÓN DEL TORNEO!' : 'Torneo finalizado',
@@ -871,7 +869,7 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
                 height: 46,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _kDorado,
+                    backgroundColor: TemaJuego.dorado,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () {
@@ -891,23 +889,23 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kFondo,
+      backgroundColor: TemaJuego.fondo,
       appBar: AppBar(
         title: const Text('TORNEO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(2),
-          child: Container(height: 2, color: _kRojo),
+          child: Container(height: 2, color: TemaJuego.rojo),
         ),
       ),
       body: SafeArea(
         child: _cargando
-            ? const Center(child: CircularProgressIndicator(color: _kDorado))
+            ? const Center(child: CircularProgressIndicator(color: TemaJuego.dorado))
             : _error != null
                 ? Center(child: Text(_error!, style: const TextStyle(color: Colors.white54)))
                 : _entregandoPremio
-                    ? const Center(child: CircularProgressIndicator(color: _kDorado))
+                    ? const Center(child: CircularProgressIndicator(color: TemaJuego.dorado))
                     : Column(
                         children: [
                           Padding(
@@ -920,7 +918,7 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
                                   const SizedBox(width: 14),
                                   _leyendaColor(_kMoradoLower, 'Perdedores'),
                                   const SizedBox(width: 14),
-                                  _leyendaColor(_kDorado, 'Gran Final'),
+                                  _leyendaColor(TemaJuego.dorado, 'Gran Final'),
                                   const SizedBox(width: 18),
                                   const Icon(Icons.pinch_outlined, color: Colors.white24, size: 15),
                                   const SizedBox(width: 4),
@@ -951,7 +949,7 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
                         height: 54,
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _kRojo,
+                            backgroundColor: TemaJuego.rojo,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
                           onPressed: _simulando ? null : () => _simularPartido(_partidoActual!),
@@ -1023,7 +1021,7 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
   ];
 
   Color _colorDeGrupo(String id) {
-    if (id == 'GF') return _kDorado;
+    if (id == 'GF') return TemaJuego.dorado;
     if (id.startsWith('U')) return _kAzulUpper;
     return _kMoradoLower;
   }
@@ -1038,7 +1036,7 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
       {'texto': 'CUARTOS DE FINAL', 'x': pos['UR1_1']!.dx, 'y': 0.0, 'color': _kAzulUpper},
       {'texto': 'SEMIFINALES', 'x': pos['UR2_1']!.dx, 'y': 0.0, 'color': _kAzulUpper},
       {'texto': 'FINAL GANADORES', 'x': pos['UF']!.dx, 'y': 0.0, 'color': _kAzulUpper},
-      {'texto': 'GRAN FINAL', 'x': pos['GF']!.dx, 'y': 0.0, 'color': _kDorado},
+      {'texto': 'GRAN FINAL', 'x': pos['GF']!.dx, 'y': 0.0, 'color': TemaJuego.dorado},
       {'texto': 'RONDA 1', 'x': pos['LR1_1']!.dx, 'y': pos['LR1_1']!.dy - 24, 'color': _kMoradoLower},
       {'texto': 'RONDA 2', 'x': pos['LR2_1']!.dx, 'y': pos['LR1_1']!.dy - 24, 'color': _kMoradoLower},
       {'texto': 'SEMIFINAL', 'x': pos['LR3']!.dx, 'y': pos['LR1_1']!.dy - 24, 'color': _kMoradoLower},
@@ -1095,7 +1093,7 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
         width: _kCardW,
         height: _kCardH,
         decoration: BoxDecoration(
-          color: _kFondoPanel,
+          color: TemaJuego.fondoPanel,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: esActual ? color : Colors.white12,
@@ -1150,13 +1148,13 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
             width: 18, height: 18,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: equipo.esUsuario ? _kDorado.withOpacity(0.2) : Colors.white10,
-              border: Border.all(color: equipo.esUsuario ? _kDorado : Colors.white24, width: 1),
+              color: equipo.esUsuario ? TemaJuego.dorado.withOpacity(0.2) : Colors.white10,
+              border: Border.all(color: equipo.esUsuario ? TemaJuego.dorado : Colors.white24, width: 1),
             ),
             child: Icon(
               equipo.esUsuario ? Icons.star : Icons.shield_outlined,
               size: 10,
-              color: equipo.esUsuario ? _kDorado : Colors.white38,
+              color: equipo.esUsuario ? TemaJuego.dorado : Colors.white38,
             ),
           ),
           const SizedBox(width: 8),

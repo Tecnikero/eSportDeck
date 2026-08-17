@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'screens/login_screen.dart';
+import 'main/login_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'providers/perfil_provider.dart';
-import 'providers/actualizacion_provider.dart';
+import 'valorant/providers/perfil_provider.dart';
+import 'valorant/providers/actualizacion_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

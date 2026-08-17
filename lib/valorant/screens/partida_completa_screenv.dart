@@ -5,20 +5,21 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import '../widgets/carta_widget.dart';
 import '../providers/perfil_provider.dart';
+import '../core/tema_juego.dart';
+import '../core/catalogos_juego.dart';
+import '../core/combos.dart';
+import '../core/rating.dart';
+import '../core/quimica.dart';
+import '../core/jugador_helpers.dart';
+import '../widgets/selector_agente_sheet.dart';
+import '../widgets/combo_tactico_sheet.dart';
+import '../widgets/encabezado_widget.dart';
+import '../widgets/selector_cartas_sheet.dart';
+
+const Color _kAzulEvento = Color(0xFF3AA7FF);
 
 const List<String> _rolesPrincipales = ['DUE', 'INI', 'CON', 'CEN'];
 
-const Color _kFondo = Color(0xFF0A0A0A);
-const Color _kFondoPanel = Color(0xFF1A0E0E);
-const Color _kRojo = Color(0xFFE30425);
-const Color _kRojoOscuro = Color(0xFF7A0000);
-const Color _kDorado = Color(0xFFFFD700);
-const Color _kTextoSuave = Color(0xFFB9B4B4);
-const Color _kBorde = Color(0x33FFFFFF);
-const Color _kAzulEvento = Color(0xFF3AA7FF);
-const Color _kCian = Color(0xFF29E0E0);
-const Color _kAtaque = Color(0xFFFF4B4B);
-const Color _kDefensa = Color(0xFF4B9CFF);
 
 class _Tarjeta extends StatelessWidget {
   final Widget child;
@@ -28,7 +29,7 @@ class _Tarjeta extends StatelessWidget {
   const _Tarjeta({
     required this.child,
     this.padding = const EdgeInsets.all(16),
-    this.borde = _kBorde,
+    this.borde = TemaJuego.borde,
   });
 
   @override
@@ -37,7 +38,7 @@ class _Tarjeta extends StatelessWidget {
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: _kFondoPanel,
+        color: TemaJuego.fondoPanel,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: borde),
       ),
@@ -46,51 +47,6 @@ class _Tarjeta extends StatelessWidget {
   }
 }
 
-class _Encabezado extends StatelessWidget {
-  final IconData icono;
-  final String titulo;
-  final String? subtitulo;
-  final Color color;
-
-  const _Encabezado({
-    required this.icono,
-    required this.titulo,
-    this.subtitulo,
-    this.color = _kRojo,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icono, color: color, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              titulo,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.0,
-              ),
-            ),
-          ],
-        ),
-        if (subtitulo != null) ...[
-          const SizedBox(height: 6),
-          Text(
-            subtitulo!,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: _kTextoSuave, fontSize: 12.5, height: 1.3),
-          ),
-        ],
-      ],
-    );
-  }
-}
 
 class _BotonPrincipal extends StatelessWidget {
   final String texto;
@@ -106,7 +62,7 @@ class _BotonPrincipal extends StatelessWidget {
       height: 54,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: _kRojo,
+          backgroundColor: TemaJuego.rojo,
           disabledBackgroundColor: Colors.white12,
           elevation: activo ? 4 : 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -148,97 +104,6 @@ const List<String> _eventosNegativos = [
 ];
 
 enum _FaseJuego { draft, agentes, simulando, resultado }
-
-const Map<String, List<String>> _agentesPorRol = {
-  'DUE': ['Jett', 'Reyna', 'Phoenix', 'Raze', 'Yoru', 'Neon', 'Iso'],
-  'INI': ['Sova', 'Breach', 'Skye', 'KAY/O', 'Fade', 'Gekko'],
-  'CON': ['Omen', 'Brimstone', 'Viper', 'Astra', 'Harbor', 'Clove'],
-  'CEN': ['Killjoy', 'Cypher', 'Sage', 'Chamber', 'Deadlock', 'Vyse'],
-};
-
-const List<Map<String, dynamic>> _identidadesComposicion = [
-  {
-    'nombre': 'Doble Controlador',
-    'rol': 'CON',
-    'cantidad': 2,
-    'bonoAtaque': 1.0,
-    'bonoDefensa': 1.5,
-    'descripcion': 'Doble humo: control total del sitio y visión. Mejor en defensa.',
-  },
-  {
-    'nombre': 'Doble Centinela',
-    'rol': 'CEN',
-    'cantidad': 2,
-    'bonoAtaque': -1.0,
-    'bonoDefensa': 3.0,
-    'descripcion': 'Doble anti-flanco: sitio inexpugnable, lentos para entrar.',
-  },
-  {
-    'nombre': 'Doble Duelista',
-    'rol': 'DUE',
-    'cantidad': 2,
-    'bonoAtaque': 3.0,
-    'bonoDefensa': -1.0,
-    'descripcion': 'Doble entry: presión constante, pero débiles para holdear.',
-  },
-  {
-    'nombre': 'Doble Iniciador',
-    'rol': 'INI',
-    'cantidad': 2,
-    'bonoAtaque': 2.0,
-    'bonoDefensa': 0.5,
-    'descripcion': 'Mucha información para ejecuciones organizadas.',
-  },
-];
-
-const List<Map<String, dynamic>> _sinergiasAgentes = [
-  {
-    'par': ['Fade', 'Raze'],
-    'nombre': 'Fade + Raze',
-    'descripcion': 'Fade marca al enemigo y Raze remata con su utilidad explosiva.',
-  },
-  {
-    'par': ['Sova', 'Breach'],
-    'nombre': 'Sova + Breach',
-    'descripcion': 'Recon perfecto: información y aturdimiento para iniciar el sitio.',
-  },
-  {
-    'par': ['Omen', 'Jett'],
-    'nombre': 'Omen + Jett',
-    'descripcion': 'Humo ciega la línea y Jett entra a máxima velocidad.',
-  },
-  {
-    'par': ['Killjoy', 'Cypher'],
-    'nombre': 'Killjoy + Cypher',
-    'descripcion': 'Doble red de información: el sitio queda imposible de retomar.',
-  },
-  {
-    'par': ['Breach', 'Raze'],
-    'nombre': 'Breach + Raze',
-    'descripcion': 'Aturdimiento más explosivos: limpieza total antes de entrar.',
-  },
-  {
-    'par': ['Viper', 'Killjoy'],
-    'nombre': 'Viper + Killjoy',
-    'descripcion': 'Veneno más trampas: la zona se vuelve territorio hostil.',
-  },
-];
-
-const List<Map<String, String>> _mapasValorant = [
-  {'nombre': 'Abyss', 'imagen': 'assets/valorant/mapas/abyss.png'},
-  {'nombre': 'Ascent', 'imagen': 'assets/valorant/mapas/ascent.png'},
-  {'nombre': 'Bind', 'imagen': 'assets/valorant/mapas/bind.png'},
-  {'nombre': 'Breeze', 'imagen': 'assets/valorant/mapas/breeze.png'},
-  {'nombre': 'Corrode', 'imagen': 'assets/valorant/mapas/corrode.png'},
-  {'nombre': 'Fracture', 'imagen': 'assets/valorant/mapas/fracture.png'},
-  {'nombre': 'Haven', 'imagen': 'assets/valorant/mapas/haven.png'},
-  {'nombre': 'Icebox', 'imagen': 'assets/valorant/mapas/icebox.png'},
-  {'nombre': 'Lotus', 'imagen': 'assets/valorant/mapas/lotus.png'},
-  {'nombre': 'Pearl', 'imagen': 'assets/valorant/mapas/pearl.png'},
-  {'nombre': 'Split', 'imagen': 'assets/valorant/mapas/split.png'},
-  {'nombre': 'Summit', 'imagen': 'assets/valorant/mapas/summit.png'},
-  {'nombre': 'Sunset', 'imagen': 'assets/valorant/mapas/sunset.png'},
-];
 
 class PartidaCompletaScreen extends StatefulWidget {
   const PartidaCompletaScreen({super.key});
@@ -335,10 +200,10 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
       isDismissible: false,
       enableDrag: false,
       builder: (context) {
-        return _SelectorCartasSheet(
+        return SelectorCartasSheet(
           opciones: _opcionesActuales,
           onElegir: (carta) => _elegirCarta(index, carta),
-          quimicaPreview: _quimicaSiSeElige,
+          quimicaPreview: (carta) => quimicaSiSeElige(carta, _seleccionados),
         );
       },
     );
@@ -353,75 +218,11 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     Navigator.of(context).pop();
   }
 
-  String _rol(Map<String, dynamic> j) => '${j['posicion'] ?? ''}'.trim().toUpperCase();
-  String _region(Map<String, dynamic> j) => '${j['region'] ?? ''}'.trim().toLowerCase();
-  String _equipo(Map<String, dynamic> j) => '${j['equipo'] ?? ''}'.trim().toLowerCase();
-  String _pais(Map<String, dynamic> j) => '${j['pais'] ?? ''}'.trim().toLowerCase();
-  String _rareza(Map<String, dynamic> j) => '${j['rareza'] ?? 'normal'}'.trim().toLowerCase().replaceAll(' ', '_');
-  bool _esIcono(Map<String, dynamic> j) => _rareza(j) == 'icono';
-  bool _esHeroe(Map<String, dynamic> j) => _rareza(j) == 'heroe';
 
-  int _quimicaEnRoster(Map<String, dynamic> carta, List<Map<String, dynamic>> roster) {
-    if (_esIcono(carta)) return 3;
 
-    var objetivos = 0;
 
-    final rolesPresentes = roster.map(_rol).toSet();
-    final balance = roster.length >= 4 && _rolesPrincipales.every(rolesPresentes.contains);
-    if (balance) objetivos += 1;
 
-    final region = _region(carta);
-    final soyHeroe = _esHeroe(carta);
 
-    bool companerosDeRegion(Map<String, dynamic> j) {
-      if (identical(j, carta)) return false;
-      if (soyHeroe) return _region(j) == region;
-      return _region(j) == region || (_esHeroe(j) && _region(j) == region);
-    }
-
-    if (region.isNotEmpty && roster.any(companerosDeRegion)) {
-      objetivos += 1;
-      if (soyHeroe) objetivos += 1;
-    }
-
-    if (!soyHeroe) {
-      final equipo = _equipo(carta);
-      bool companerosDeEquipo(Map<String, dynamic> j) {
-        if (identical(j, carta)) return false;
-        if (_esHeroe(j)) return _region(j) == region;
-        return _equipo(j) == equipo;
-      }
-      if (equipo.isNotEmpty && roster.any(companerosDeEquipo)) objetivos += 1;
-    }
-
-    final pais = _pais(carta);
-    bool companerosDePais(Map<String, dynamic> j) {
-      if (identical(j, carta)) return false;
-      return _pais(j) == pais;
-    }
-    if (pais.isNotEmpty && roster.any(companerosDePais)) objetivos += 1;
-
-    return objetivos;
-  }
-
-  int _quimicaDeCarta(Map<String, dynamic> carta) => _quimicaEnRoster(carta, _seleccionados);
-
-  int _quimicaSiSeElige(Map<String, dynamic> carta) =>
-      _quimicaEnRoster(carta, [..._seleccionados, carta]);
-
-  int get _quimicaTotalEquipo {
-    if (_seleccionados.isEmpty) return 0;
-    return _seleccionados.fold<int>(0, (s, j) => s + _quimicaDeCarta(j));
-  }
-
-  double _ratingEfectivo(List<Map<String, dynamic>> roster, {bool conQuimica = true}) {
-    if (roster.isEmpty) return 0;
-    final sumaOvr = roster.fold<double>(0, (s, j) => s + ((j['ovr'] ?? 0) as num));
-    final basePromedio = sumaOvr / roster.length;
-    if (!conQuimica) return basePromedio;
-    final quimicaTotal = roster.fold<int>(0, (s, j) => s + _quimicaEnRoster(j, roster));
-    return basePromedio + quimicaTotal;
-  }
 
   int _rachaActual(bool paraJugador) {
     var racha = 0;
@@ -436,22 +237,9 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     return racha;
   }
 
-  List<Map<String, dynamic>> _identidadesActivas(List<Map<String, dynamic>> roster) {
-    if (roster.isEmpty) return const [];
-    final conteoPorRol = <String, int>{};
-    for (final j in roster) {
-      final rol = _rol(j);
-      conteoPorRol[rol] = (conteoPorRol[rol] ?? 0) + 1;
-    }
-    return _identidadesComposicion.where((identidad) {
-      final rol = identidad['rol'] as String;
-      final cantidad = identidad['cantidad'] as int;
-      return (conteoPorRol[rol] ?? 0) >= cantidad;
-    }).toList();
-  }
 
   double _bonoIdentidadPromedio(List<Map<String, dynamic>> roster) {
-    final activas = _identidadesActivas(roster);
+    final activas = identidadesActivas(roster);
     if (activas.isEmpty) return 0;
     return activas.fold<double>(0.0, (s, id) {
       final atk = (id['bonoAtaque'] as num).toDouble();
@@ -460,160 +248,19 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     });
   }
 
-  List<Map<String, dynamic>> _sinergiasActivas() {
-    final agentesElegidos = _agentesAsignados.whereType<String>().toSet();
-    return _sinergiasAgentes.where((sinergia) {
-      final par = (sinergia['par'] as List).cast<String>();
-      return par.every(agentesElegidos.contains);
-    }).toList();
-  }
 
-  double _bonoSinergiaAgentes() => _sinergiasActivas().length * 0.5;
+  double _bonoSinergiaAgentes() => sinergiasActivas(_agentesAsignados).length * 0.5;
 
   double _bonificacionSinergia() =>
       _bonoIdentidadPromedio(_seleccionados) + _bonoSinergiaAgentes();
 
-  String _formatoBono(double valor) =>
-      valor == valor.roundToDouble() ? valor.toInt().toString() : valor.toStringAsFixed(1);
 
-  String _rutaAgente(String agente) {
-    final archivo = agente.toLowerCase().replaceAll('/', '').replaceAll(' ', '_');
-    return 'assets/valorant/agentes/$archivo.png';
-  }
-
-  Future<void> _mostrarComboTactico() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        return Container(
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
-          padding: EdgeInsets.fromLTRB(
-            16, 20, 16, 24 + MediaQuery.of(context).padding.bottom,
-          ),
-          decoration: BoxDecoration(
-            color: _kFondoPanel,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(color: _kRojo, width: 1.5),
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const _Encabezado(
-                  icono: Icons.tips_and_updates,
-                  titulo: 'COMBOS TÁCTICOS',
-                  subtitulo: 'Estos combos suman puntos a tu OVR total según el lado.',
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'IDENTIDAD DE COMPOSICIÓN (ATK / DEF)',
-                  style: TextStyle(color: _kDorado, fontWeight: FontWeight.w900, fontSize: 12.5, letterSpacing: 0.8),
-                ),
-                const SizedBox(height: 8),
-                ..._identidadesComposicion.map((c) => _filaComboDinamico(c)),
-                const SizedBox(height: 18),
-                const Text(
-                  'SINERGIAS DE AGENTES (GLOBAL)',
-                  style: TextStyle(color: _kCian, fontWeight: FontWeight.w900, fontSize: 12.5, letterSpacing: 0.8),
-                ),
-                const SizedBox(height: 8),
-                ..._sinergiasAgentes.map((s) => _filaComboEstatico(s, cian: true)),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _filaComboDinamico(Map<String, dynamic> combo) {
-    final atk = (combo['bonoAtaque'] as num).toDouble();
-    final def = (combo['bonoDefensa'] as num).toDouble();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.groups, color: _kDorado, size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${combo['nombre']}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12.5),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${combo['descripcion']}',
-                  style: const TextStyle(color: _kTextoSuave, fontSize: 11.5, height: 1.3),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                'ATK ${atk >= 0 ? '+' : ''}${_formatoBono(atk)}',
-                style: TextStyle(color: atk >= 0 ? _kAtaque : _kTextoSuave, fontWeight: FontWeight.w900, fontSize: 11),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'DEF ${def >= 0 ? '+' : ''}${_formatoBono(def)}',
-                style: TextStyle(color: def >= 0 ? _kDefensa : _kTextoSuave, fontWeight: FontWeight.w900, fontSize: 11),
-              ),
-            ],
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _filaComboEstatico(Map<String, dynamic> combo, {bool cian = false}) {
-    final color = cian ? _kCian : _kDorado;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.auto_awesome, color: color, size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${combo['nombre']}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12.5),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${combo['descripcion']}',
-                  style: const TextStyle(color: _kTextoSuave, fontSize: 11.5, height: 1.3),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '+0.5',
-            style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12.5),
-          ),
-        ],
-      ),
-    );
-  }
+  Future<void> _mostrarComboTactico() async => mostrarComboTactico(context);
 
   void _irAAsignarAgentes() {
     if (_seleccionados.length != 5) return;
     setState(() {
-      _mapaActual = _mapasValorant[_random.nextInt(_mapasValorant.length)];
+      _mapaActual = mapasValorant[_random.nextInt(mapasValorant.length)];
       for (var i = 0; i < _agentesAsignados.length; i++) {
         _agentesAsignados[i] = null;
       }
@@ -624,125 +271,14 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
   Future<void> _mostrarSelectorAgente(int index) async {
     final carta = _casillas[index];
     if (carta == null) return;
-    final rol = _rol(carta);
-    final agentesDelRol = _agentesPorRol[rol] ??
-        _agentesPorRol.values.expand((lista) => lista).toList();
-
-    final usadosPorOtros = <String>{
-      for (var i = 0; i < _agentesAsignados.length; i++)
-        if (i != index && _agentesAsignados[i] != null) _agentesAsignados[i]!
-    };
-    final agentes = agentesDelRol.where((a) => !usadosPorOtros.contains(a)).toList();
-
-    final nombreMapa = _mapaActual?['nombre'] ?? '';
-
-    await showModalBottomSheet<void>(
+    await mostrarSelectorAgente(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        return Container(
-          padding: EdgeInsets.fromLTRB(
-            16, 20, 16, 30 + MediaQuery.of(context).padding.bottom,
-          ),
-          decoration: BoxDecoration(
-            color: _kFondoPanel,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(color: _kRojo, width: 1.5),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.person_pin_circle, color: _kRojo, size: 26),
-              const SizedBox(height: 6),
-              Text(
-                'AGENTE PARA ${'${carta['nombre'] ?? ''}'.toUpperCase()}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 15,
-                  letterSpacing: 1.0,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Rol: $rol  ·  Mapa: $nombreMapa',
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                '⭐ = comfort pick para este mapa (+1 táctico oculto)',
-                style: TextStyle(color: _kDorado, fontSize: 11),
-              ),
-              const SizedBox(height: 16),
-              if (agentes.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12.0),
-                  child: Text(
-                    'No quedan agentes de este rol disponibles: ya están asignados a otros jugadores.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white54, fontSize: 12.5),
-                  ),
-                )
-              else
-                Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 14,
-                runSpacing: 14,
-                children: agentes.map((agente) {
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() => _agentesAsignados[index] = agente);
-                      Navigator.of(context).pop();
-                    },
-                    child: SizedBox(
-                      width: 70,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 62,
-                            height: 62,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _kFondo,
-                              border: Border.all(color: Colors.white24, width: 1.5),
-                            ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                _rutaAgente(agente),
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => const Icon(
-                                  Icons.person,
-                                  color: Colors.white38,
-                                  size: 28,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            agente,
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-        );
-      },
+      carta: carta,
+      rol: rolDe(carta),
+      nombreMapa: _mapaActual?['nombre'] ?? '',
+      agentesAsignados: _agentesAsignados,
+      indiceJugador: index,
+      onElegir: (agente) => setState(() => _agentesAsignados[index] = agente),
     );
   }
 
@@ -784,8 +320,8 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     try {
       _rosterRival = await _generarRivalIA();
 
-      final miMediaBase = _ratingEfectivo(_seleccionados, conQuimica: true);
-      final rivalMediaBase = _ratingEfectivo(_rosterRival, conQuimica: true);
+      final miMediaBase = ratingEfectivo(_seleccionados, conQuimica: true);
+      final rivalMediaBase = ratingEfectivo(_rosterRival, conQuimica: true);
       final ruidoPartido = (_random.nextDouble() * 6) - 3;
       final ratingPropioBase = miMediaBase + (ruidoPartido / 2) + _bonoSinergia;
       final ratingRivalBase = rivalMediaBase - (ruidoPartido / 2);
@@ -953,8 +489,8 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
 
       final mvp = List<Map<String, dynamic>>.from(_seleccionados)
         ..sort((a, b) {
-          final ratingA = ((a['ovr'] ?? 0) as num) + _quimicaDeCarta(a);
-          final ratingB = ((b['ovr'] ?? 0) as num) + _quimicaDeCarta(b);
+          final ratingA = ((a['ovr'] ?? 0) as num) + quimicaDeCarta(a, _seleccionados);
+          final ratingB = ((b['ovr'] ?? 0) as num) + quimicaDeCarta(b, _seleccionados);
           return ratingB.compareTo(ratingA);
         });
 
@@ -1022,14 +558,14 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
         return Container(
           padding: EdgeInsets.fromLTRB(20, 22, 20, 30 + MediaQuery.of(context).padding.bottom),
           decoration: BoxDecoration(
-            color: _kFondoPanel,
+            color: TemaJuego.fondoPanel,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(color: _kDorado, width: 1.5),
+            border: Border.all(color: TemaJuego.dorado, width: 1.5),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.monetization_on, color: _kDorado, size: 30),
+              const Icon(Icons.monetization_on, color: TemaJuego.dorado, size: 30),
               const SizedBox(height: 8),
               const Text(
                 'GANASTE LA PISTOLA',
@@ -1039,12 +575,12 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
               const Text(
                 '¿Cómo administras la economía para la ronda 2?',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: _kTextoSuave, fontSize: 12.5),
+                style: TextStyle(color: TemaJuego.textoSuave, fontSize: 12.5),
               ),
               const SizedBox(height: 18),
               _opcionEvento(
                 icono: Icons.bolt,
-                color: _kRojo,
+                color: TemaJuego.rojo,
                 titulo: 'FORZAR COMPRA',
                 subtitulo: '70% de ganar la ronda 2 ahora mismo.\nSi falla, la ronda 3 queda muy comprometida.',
                 onTap: () => Navigator.of(context).pop('forzar'),
@@ -1110,7 +646,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
             return Container(
               padding: EdgeInsets.fromLTRB(20, 22, 20, 30 + MediaQuery.of(context).padding.bottom),
               decoration: BoxDecoration(
-                color: _kFondoPanel,
+                color: TemaJuego.fondoPanel,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                 border: Border.all(color: _kAzulEvento, width: 1.5),
               ),
@@ -1131,7 +667,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                             : (acerto! ? '¡Ganaste el duelo! La ronda es tuya.' : 'Perdiste el duelo. La ronda se pierde.'))
                         : 'El AIM de ambos está oculto. ¿Quién gana el duelo?\nEsto define el resultado de la ronda.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: _kTextoSuave, fontSize: 12.5),
+                    style: const TextStyle(color: TemaJuego.textoSuave, fontSize: 12.5),
                   ),
                   const SizedBox(height: 26),
                   Row(
@@ -1147,7 +683,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                           width: 112,
                           revelado: revelado,
                           destacado: revelado && ganaNuestro,
-                          colorDestacado: _kDorado,
+                          colorDestacado: TemaJuego.dorado,
                         ),
                       ),
                       const Padding(
@@ -1163,7 +699,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                           width: 112,
                           revelado: revelado,
                           destacado: revelado && !ganaNuestro,
-                          colorDestacado: _kRojo,
+                          colorDestacado: TemaJuego.rojo,
                         ),
                       ),
                     ],
@@ -1229,14 +765,14 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
             return Container(
               padding: EdgeInsets.fromLTRB(20, 22, 20, 30 + MediaQuery.of(context).padding.bottom),
               decoration: BoxDecoration(
-                color: _kFondoPanel,
+                color: TemaJuego.fondoPanel,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                border: Border.all(color: _kRojo, width: 1.5),
+                border: Border.all(color: TemaJuego.rojo, width: 1.5),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.warning_amber_rounded, color: _kRojo, size: 30),
+                  const Icon(Icons.warning_amber_rounded, color: TemaJuego.rojo, size: 30),
                   const SizedBox(height: 8),
                   Text(
                     'CLUTCH 1v$numRivales',
@@ -1248,7 +784,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                         ? (acerto! ? '¡CLUTCH GANADO! La ronda es tuya.' : 'Te enfrentaste al rival equivocado. Ronda perdida.')
                         : 'La estadística CLUTCH de los rivales está oculta.\n¿A cuál enfrentas primero? El resultado define la ronda.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: _kTextoSuave, fontSize: 12.5),
+                    style: const TextStyle(color: TemaJuego.textoSuave, fontSize: 12.5),
                   ),
                   const SizedBox(height: 20),
 
@@ -1259,7 +795,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                     width: 100,
                     revelado: true,
                     destacado: revelado && acerto == true,
-                    colorDestacado: _kDorado,
+                    colorDestacado: TemaJuego.dorado,
                   ),
                   const Padding(
                     padding: EdgeInsets.only(top: 4, bottom: 4),
@@ -1285,7 +821,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                           width: 90,
                           revelado: revelado,
                           destacado: revelado && i == indiceMasDebil,
-                          colorDestacado: _kDorado,
+                          colorDestacado: TemaJuego.dorado,
                         ),
                       );
                     }),
@@ -1318,7 +854,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
         return Container(
           padding: EdgeInsets.fromLTRB(20, 22, 20, 30 + MediaQuery.of(context).padding.bottom),
           decoration: BoxDecoration(
-            color: _kFondoPanel,
+            color: TemaJuego.fondoPanel,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             border: Border.all(color: _kAzulEvento, width: 1.5),
           ),
@@ -1335,12 +871,12 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
               const Text(
                 'El rival viene de una mala racha económica. ¿Cómo lo aprovechas?',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: _kTextoSuave, fontSize: 12.5),
+                style: TextStyle(color: TemaJuego.textoSuave, fontSize: 12.5),
               ),
               const SizedBox(height: 18),
               _opcionEvento(
                 icono: Icons.flash_on,
-                color: _kRojo,
+                color: TemaJuego.rojo,
                 titulo: 'RUSHEAR EL SITIO',
                 subtitulo: '65% de ganar la ronda al instante.\nSi sale mal, la ronda se pierde directo.',
                 onTap: () => Navigator.of(context).pop(_random.nextDouble() < 0.65),
@@ -1371,14 +907,14 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
         return Container(
           padding: EdgeInsets.fromLTRB(20, 22, 20, 30 + MediaQuery.of(context).padding.bottom),
           decoration: BoxDecoration(
-            color: _kFondoPanel,
+            color: TemaJuego.fondoPanel,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(color: _kDorado, width: 1.5),
+            border: Border.all(color: TemaJuego.dorado, width: 1.5),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.local_fire_department, color: _kDorado, size: 30),
+              const Icon(Icons.local_fire_department, color: TemaJuego.dorado, size: 30),
               const SizedBox(height: 8),
               const Text(
                 'MOMENTO CALIENTE',
@@ -1388,12 +924,12 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
               const Text(
                 'El equipo está en racha. ¿Buscas el ace o cierras la ronda seguro?',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: _kTextoSuave, fontSize: 12.5),
+                style: TextStyle(color: TemaJuego.textoSuave, fontSize: 12.5),
               ),
               const SizedBox(height: 18),
               _opcionEvento(
                 icono: Icons.emoji_events,
-                color: _kDorado,
+                color: TemaJuego.dorado,
                 titulo: 'BUSCAR EL ACE',
                 subtitulo: '50% de ganar la ronda con gloria total.\n50% de quedar expuesto y perderla.',
                 onTap: () => Navigator.of(context).pop(_random.nextDouble() < 0.5),
@@ -1426,7 +962,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: _kFondo,
+          color: TemaJuego.fondo,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: color.withOpacity(0.6)),
         ),
@@ -1459,7 +995,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kFondo,
+      backgroundColor: TemaJuego.fondo,
       appBar: AppBar(
         title: const Text('PARTIDA COMPLETA',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
@@ -1476,13 +1012,13 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                 height: 30,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _kRojo.withOpacity(0.12),
-                  border: Border.all(color: _kRojo.withOpacity(0.6), width: 1.5),
+                  color: TemaJuego.rojo.withOpacity(0.12),
+                  border: Border.all(color: TemaJuego.rojo.withOpacity(0.6), width: 1.5),
                 ),
                 child: const Center(
                   child: Text(
                     '?',
-                    style: TextStyle(color: _kRojo, fontWeight: FontWeight.w900, fontSize: 15),
+                    style: TextStyle(color: TemaJuego.rojo, fontWeight: FontWeight.w900, fontSize: 15),
                   ),
                 ),
               ),
@@ -1492,7 +1028,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(2),
-          child: Container(height: 2, color: _kRojo),
+          child: Container(height: 2, color: TemaJuego.rojo),
         ),
       ),
       body: SafeArea(
@@ -1513,7 +1049,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
         const SizedBox(height: 10),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16.0),
-          child: _Encabezado(
+          child: EncabezadoSheet(
             icono: Icons.stadium,
             titulo: 'ARMA TU EQUIPO',
             subtitulo: 'Simulación real a 13 rondas con eventos en vivo. Toca una casilla y elige un jugador.',
@@ -1522,7 +1058,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
         if (_error != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-            child: Text(_error!, style: const TextStyle(color: _kRojo), textAlign: TextAlign.center),
+            child: Text(_error!, style: const TextStyle(color: TemaJuego.rojo), textAlign: TextAlign.center),
           ),
         const SizedBox(height: 14),
         Padding(
@@ -1561,10 +1097,10 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
         const SizedBox(height: 10),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: _Encabezado(
+          child: EncabezadoSheet(
             icono: Icons.map_outlined,
             titulo: 'MAPA: ${nombreMapa.toUpperCase()}',
-            color: _kDorado,
+            color: TemaJuego.dorado,
             subtitulo:
                 'Elige un agente por jugador. Busca sinergias de habilidades.',
           ),
@@ -1605,7 +1141,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
-                boxShadow: [BoxShadow(color: _kDorado.withOpacity(0.4), blurRadius: 8)],
+                boxShadow: [BoxShadow(color: TemaJuego.dorado.withOpacity(0.4), blurRadius: 8)],
               ),
               child: CartaWidget(jugador: carta, width: 100),
             ),
@@ -1615,9 +1151,9 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
               height: 46,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _kFondo,
+                color: TemaJuego.fondo,
                 border: Border.all(
-                  color: agenteActual == null ? Colors.white24 : _kRojoOscuro,
+                  color: agenteActual == null ? Colors.white24 : TemaJuego.rojoOscuro,
                   width: 1.5,
                 ),
               ),
@@ -1625,7 +1161,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                   ? const Icon(Icons.add, color: Colors.white38, size: 20)
                   : ClipOval(
                       child: Image.asset(
-                        _rutaAgente(agenteActual),
+                        rutaAgente(agenteActual),
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => const Icon(
                           Icons.person,
@@ -1668,28 +1204,28 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [BoxShadow(color: _kDorado.withOpacity(0.35), blurRadius: 8)],
+                      boxShadow: [BoxShadow(color: TemaJuego.dorado.withOpacity(0.35), blurRadius: 8)],
                     ),
                     child: CartaWidget(jugador: carta, width: 100),
                   ),
                   const SizedBox(height: 5),
-                  _puntitosQuimica(_quimicaDeCarta(carta)),
+                  _puntitosQuimica(quimicaDeCarta(carta, _seleccionados)),
                 ],
               )
             : AspectRatio(
                 aspectRatio: 626 / 794,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: _kFondoPanel,
+                    color: TemaJuego.fondoPanel,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _kBorde, width: 1.5),
+                    border: Border.all(color: TemaJuego.borde, width: 1.5),
                   ),
                   child: Center(
                     child: estaRevelando
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(color: _kRojo, strokeWidth: 2),
+                            child: CircularProgressIndicator(color: TemaJuego.rojo, strokeWidth: 2),
                           )
                         : Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -1699,10 +1235,10 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                                 height: 36,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: _kRojo.withOpacity(0.12),
-                                  border: Border.all(color: _kRojo.withOpacity(0.5)),
+                                  color: TemaJuego.rojo.withOpacity(0.12),
+                                  border: Border.all(color: TemaJuego.rojo.withOpacity(0.5)),
                                 ),
-                                child: Icon(Icons.add, color: _kRojo.withOpacity(0.9), size: 20),
+                                child: Icon(Icons.add, color: TemaJuego.rojo.withOpacity(0.9), size: 20),
                               ),
                               const SizedBox(height: 6),
                               Text(
@@ -1719,12 +1255,12 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
   }
 
   Widget _buildPanelQuimica() {
-    final rolesPresentes = _seleccionados.map(_rol).toSet();
+    final rolesPresentes = _seleccionados.map(rolDe).toSet();
     final rolesOk = _rolesPrincipales.where(rolesPresentes.contains).length;
     final regionOk = _seleccionados.any(
-        (j) => _region(j).isNotEmpty && _seleccionados.where((k) => _region(k) == _region(j)).length > 1);
+        (j) => regionDe(j).isNotEmpty && _seleccionados.where((k) => regionDe(k) == regionDe(j)).length > 1);
     final equipoOk = _seleccionados.any(
-        (j) => _equipo(j).isNotEmpty && _seleccionados.where((k) => _equipo(k) == _equipo(j)).length > 1);
+        (j) => equipoDe(j).isNotEmpty && _seleccionados.where((k) => equipoDe(k) == equipoDe(j)).length > 1);
 
     return _Tarjeta(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1733,22 +1269,22 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.bolt, color: _kDorado, size: 18),
+              const Icon(Icons.bolt, color: TemaJuego.dorado, size: 18),
               const SizedBox(width: 6),
               const Text('Química del equipo',
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
               const Spacer(),
-              Text('$_quimicaTotalEquipo/15', style: const TextStyle(color: _kDorado, fontSize: 13, fontWeight: FontWeight.bold)),
+              Text('${quimicaTotalEquipo(_seleccionados)}/15', style: const TextStyle(color: TemaJuego.dorado, fontSize: 13, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
-              value: (_quimicaTotalEquipo / 15).clamp(0, 1).toDouble(),
+              value: (quimicaTotalEquipo(_seleccionados) / 15).clamp(0, 1).toDouble(),
               minHeight: 6,
               backgroundColor: Colors.white10,
-              valueColor: const AlwaysStoppedAnimation(_kDorado),
+              valueColor: const AlwaysStoppedAnimation(TemaJuego.dorado),
             ),
           ),
           const SizedBox(height: 10),
@@ -1766,7 +1302,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
   }
 
   Widget _miniIndicador(IconData icono, String label, String valor, bool activo) {
-    final color = activo ? _kDorado : Colors.white38;
+    final color = activo ? TemaJuego.dorado : Colors.white38;
     return Column(
       children: [
         Icon(icono, size: 16, color: color),
@@ -1789,9 +1325,9 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
             height: 8,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: activo ? _kDorado : Colors.transparent,
-              border: Border.all(color: activo ? _kDorado : Colors.white30, width: 1),
-              boxShadow: activo ? [BoxShadow(color: _kDorado.withOpacity(0.6), blurRadius: 4)] : null,
+              color: activo ? TemaJuego.dorado : Colors.transparent,
+              border: Border.all(color: activo ? TemaJuego.dorado : Colors.white30, width: 1),
+              boxShadow: activo ? [BoxShadow(color: TemaJuego.dorado.withOpacity(0.6), blurRadius: 4)] : null,
             ),
           ),
         );
@@ -1808,7 +1344,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        Container(color: _kFondo),
+        Container(color: TemaJuego.fondo),
         if (_mapaActual != null)
           Positioned.fill(
             child: Opacity(
@@ -1825,7 +1361,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [_kFondo.withOpacity(0.35), _kFondo.withOpacity(0.5), _kFondo.withOpacity(0.35)],
+              colors: [TemaJuego.fondo.withOpacity(0.35), TemaJuego.fondo.withOpacity(0.5), TemaJuego.fondo.withOpacity(0.35)],
             ),
           ),
         ),
@@ -1864,7 +1400,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
           decoration: BoxDecoration(
             color: Colors.black.withOpacity(0.55),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _enProrroga ? _kDorado.withOpacity(0.6) : Colors.white12),
+            border: Border.all(color: _enProrroga ? TemaJuego.dorado.withOpacity(0.6) : Colors.white12),
           ),
           child: Column(
             children: [
@@ -1874,7 +1410,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                   child: Text(
                     '¡PRÓRROGA! · SE NECESITA DIFERENCIA DE 2',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: _kDorado, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.1),
+                    style: TextStyle(color: TemaJuego.dorado, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.1),
                   ),
                 ),
               Text(
@@ -1890,7 +1426,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _escudoEquipo(icono: Icons.shield, color: _kRojo, etiqueta: 'TÚ'),
+                  _escudoEquipo(icono: Icons.shield, color: TemaJuego.rojo, etiqueta: 'TÚ'),
                   Column(
                     children: [
                       Text(
@@ -1906,14 +1442,14 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
-                          color: _kFondoPanel,
+                          color: TemaJuego.fondoPanel,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: _kDorado.withOpacity(0.5)),
+                          border: Border.all(color: TemaJuego.dorado.withOpacity(0.5)),
                         ),
                         child: Text(
                           _rondaActual == 0 ? 'PREPARANDO' : 'RONDA $_rondaActual',
                           style: const TextStyle(
-                            color: _kDorado,
+                            color: TemaJuego.dorado,
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.8,
@@ -1935,7 +1471,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
             borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), bottomRight: Radius.circular(10)),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-              color: _kRojo,
+              color: TemaJuego.rojo,
               child: const Text(
                 'EN VIVO',
                 style: TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w900, letterSpacing: 1.0),
@@ -1955,7 +1491,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
           height: 46,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: _kFondoPanel,
+            color: TemaJuego.fondoPanel,
             border: Border.all(color: color, width: 2),
           ),
           child: Icon(icono, color: color, size: 22),
@@ -2002,7 +1538,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
           SizedBox(
             height: 16,
             child: gano == true
-                ? const Icon(Icons.circle, color: _kDorado, size: 7)
+                ? const Icon(Icons.circle, color: TemaJuego.dorado, size: 7)
                 : const SizedBox.shrink(),
           ),
           Container(
@@ -2010,9 +1546,9 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
             height: 8,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: esActual ? _kCian : _kFondoPanel,
-              border: Border.all(color: esActual ? _kCian : Colors.white38, width: 1.3),
-              boxShadow: esActual ? [BoxShadow(color: _kCian.withOpacity(0.7), blurRadius: 6)] : null,
+              color: esActual ? TemaJuego.cian : TemaJuego.fondoPanel,
+              border: Border.all(color: esActual ? TemaJuego.cian : Colors.white38, width: 1.3),
+              boxShadow: esActual ? [BoxShadow(color: TemaJuego.cian.withOpacity(0.7), blurRadius: 6)] : null,
             ),
           ),
           const SizedBox(height: 2),
@@ -2020,7 +1556,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
           SizedBox(
             height: 16,
             child: gano == false
-                ? const Icon(Icons.circle, color: _kRojo, size: 7)
+                ? const Icon(Icons.circle, color: TemaJuego.rojo, size: 7)
                 : const SizedBox.shrink(),
           ),
         ],
@@ -2048,7 +1584,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
               height: 6,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(4),
-                gradient: const LinearGradient(colors: [_kRojoOscuro, Colors.white12, _kDorado]),
+                gradient: const LinearGradient(colors: [TemaJuego.rojoOscuro, Colors.white12, TemaJuego.dorado]),
               ),
             ),
             AnimatedAlign(
@@ -2060,8 +1596,8 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                 height: 14,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _kCian,
-                  boxShadow: [BoxShadow(color: _kCian.withOpacity(0.7), blurRadius: 8)],
+                  color: TemaJuego.cian,
+                  boxShadow: [BoxShadow(color: TemaJuego.cian.withOpacity(0.7), blurRadius: 8)],
                 ),
               ),
             ),
@@ -2071,13 +1607,13 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
           const Padding(
             padding: EdgeInsets.only(top: 8.0),
             child: Text('¡Tu equipo está en racha! +1 de impulso',
-                style: TextStyle(color: _kDorado, fontSize: 11.5, fontWeight: FontWeight.bold)),
+                style: TextStyle(color: TemaJuego.dorado, fontSize: 11.5, fontWeight: FontWeight.bold)),
           )
         else if (rachaRival >= 3)
           const Padding(
             padding: EdgeInsets.only(top: 8.0),
             child: Text('El rival está en racha, -1 a tu equipo',
-                style: TextStyle(color: _kRojo, fontSize: 11.5, fontWeight: FontWeight.bold)),
+                style: TextStyle(color: TemaJuego.rojo, fontSize: 11.5, fontWeight: FontWeight.bold)),
           ),
       ],
     );
@@ -2114,7 +1650,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.55),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: enProrroga ? _kDorado.withOpacity(0.5) : Colors.white12),
+          border: Border.all(color: enProrroga ? TemaJuego.dorado.withOpacity(0.5) : Colors.white12),
         ),
         child: Column(
           children: [
@@ -2123,12 +1659,12 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
               height: 42,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _kFondo,
-                border: Border.all(color: enProrroga ? _kDorado : _kCian, width: 2),
+                color: TemaJuego.fondo,
+                border: Border.all(color: enProrroga ? TemaJuego.dorado : TemaJuego.cian, width: 2),
               ),
               child: Icon(
                 enVivo ? Icons.bolt : (gano ? Icons.check : Icons.close),
-                color: enProrroga ? _kDorado : _kCian,
+                color: enProrroga ? TemaJuego.dorado : TemaJuego.cian,
                 size: 20,
               ),
             ),
@@ -2139,7 +1675,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                   : 'RONDA $ronda${enProrroga ? ' (PRÓRROGA)' : ''} · ${gano ? 'GANADA' : 'PERDIDA'}',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: enProrroga ? _kDorado : _kCian,
+                color: enProrroga ? TemaJuego.dorado : TemaJuego.cian,
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
                 fontStyle: FontStyle.italic,
@@ -2188,11 +1724,11 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
         ],
         if (_bonoSinergia > 0) ...[
           const SizedBox(width: 16),
-          const Icon(Icons.auto_awesome, color: _kDorado, size: 13),
+          const Icon(Icons.auto_awesome, color: TemaJuego.dorado, size: 13),
           const SizedBox(width: 6),
           Text(
-            'Sinergia +${_formatoBono(_bonoSinergia)}',
-            style: const TextStyle(color: _kDorado, fontWeight: FontWeight.w600, fontSize: 11.5),
+            'Sinergia +${formatoBono(_bonoSinergia)}',
+            style: const TextStyle(color: TemaJuego.dorado, fontWeight: FontWeight.w600, fontSize: 11.5),
           ),
         ],
       ],
@@ -2200,7 +1736,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
   }
 
   Widget _buildResultado() {
-    final color = _victoria ? _kDorado : _kRojo;
+    final color = _victoria ? TemaJuego.dorado : TemaJuego.rojo;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Column(
@@ -2219,28 +1755,28 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Marcador final: $_rondasJugador - $_rondasIA',
-                  style: const TextStyle(color: _kTextoSuave, fontSize: 14.5),
+                  style: const TextStyle(color: TemaJuego.textoSuave, fontSize: 14.5),
                 ),
                 if (_bonoSinergia > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 4.0),
                     child: Text(
-                      'Ventaja táctica por sinergia: +${_formatoBono(_bonoSinergia)}',
-                      style: const TextStyle(color: _kDorado, fontSize: 11.5, fontWeight: FontWeight.bold),
+                      'Ventaja táctica por sinergia: +${formatoBono(_bonoSinergia)}',
+                      style: const TextStyle(color: TemaJuego.dorado, fontSize: 11.5, fontWeight: FontWeight.bold),
                     ),
                   ),
                 const SizedBox(height: 18),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: _kDorado.withOpacity(0.1),
+                    color: TemaJuego.dorado.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: _kDorado.withOpacity(0.4)),
+                    border: Border.all(color: TemaJuego.dorado.withOpacity(0.4)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.monetization_on, color: _kDorado, size: 20),
+                      const Icon(Icons.monetization_on, color: TemaJuego.dorado, size: 20),
                       const SizedBox(width: 6),
                       Text(
                         '+$_monedasGanadas monedas',
@@ -2262,7 +1798,7 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
                   const SizedBox(height: 14),
                   CartaWidget(jugador: _mvp!, width: 200),
                   const SizedBox(height: 8),
-                  _puntitosQuimica(_quimicaDeCarta(_mvp!)),
+                  _puntitosQuimica(quimicaDeCarta(_mvp!, _seleccionados)),
                 ],
               ),
             ),
@@ -2274,110 +1810,6 @@ class _PartidaCompletaScreenState extends State<PartidaCompletaScreen> {
     );
   }
 }
-
-class _SelectorCartasSheet extends StatelessWidget {
-  final List<Map<String, dynamic>> opciones;
-  final void Function(Map<String, dynamic>) onElegir;
-  final int Function(Map<String, dynamic>) quimicaPreview;
-
-  const _SelectorCartasSheet({
-    required this.opciones,
-    required this.onElegir,
-    required this.quimicaPreview,
-  });
-
-  Widget _puntitos(int valor) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(4, (i) {
-        final activo = i < valor;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 1.5),
-          child: Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: activo ? _kDorado : Colors.transparent,
-              border: Border.all(color: activo ? _kDorado : Colors.white30, width: 1),
-              boxShadow: activo ? [BoxShadow(color: _kDorado.withOpacity(0.6), blurRadius: 4)] : null,
-            ),
-          ),
-        );
-      }),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final anchoDisponible = MediaQuery.of(context).size.width - 32;
-    final anchoTarjeta = (anchoDisponible - 12) / 2;
-
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        16, 20, 16, 30 + MediaQuery.of(context).padding.bottom,
-      ),
-      decoration: BoxDecoration(
-        color: _kFondoPanel,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border.all(color: _kRojo, width: 1.5),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.stadium, color: _kRojo, size: 28),
-          const SizedBox(height: 6),
-          const Text(
-            'ELIGE TU JUGADOR',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.2),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Toca una carta para agregarla a tu equipo',
-            style: TextStyle(color: Colors.white54, fontSize: 12),
-          ),
-          const SizedBox(height: 18),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _opcionCarta(opciones[0], anchoTarjeta),
-              _opcionCarta(opciones[1], anchoTarjeta),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _opcionCarta(opciones[2], anchoTarjeta),
-              _opcionCarta(opciones[3], anchoTarjeta),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _opcionCarta(Map<String, dynamic> carta, double ancho) {
-    return GestureDetector(
-      onTap: () => onElegir(carta),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: _kRojo.withOpacity(0.5), width: 1.5),
-            ),
-            child: CartaWidget(jugador: carta, width: ancho),
-          ),
-          const SizedBox(height: 6),
-          _puntitos(quimicaPreview(carta)),
-        ],
-      ),
-    );
-  }
-}
-
 class _CartaConStatOculta extends StatelessWidget {
   final Map<String, dynamic> jugador;
   final String etiquetaStat;
@@ -2394,7 +1826,7 @@ class _CartaConStatOculta extends StatelessWidget {
     required this.width,
     required this.revelado,
     this.destacado = false,
-    this.colorDestacado = _kDorado,
+    this.colorDestacado = TemaJuego.dorado,
   });
 
   @override
@@ -2428,7 +1860,7 @@ class _CartaConStatOculta extends StatelessWidget {
                   key: ValueKey(revelado),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _kFondo,
+                    color: TemaJuego.fondo,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: revelado && destacado ? colorDestacado : Colors.white38,
@@ -2487,7 +1919,7 @@ class _BannerResultadoEvento extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = acerto ? _kDorado : _kRojo;
+    final color = acerto ? TemaJuego.dorado : TemaJuego.rojo;
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
       duration: const Duration(milliseconds: 350),
