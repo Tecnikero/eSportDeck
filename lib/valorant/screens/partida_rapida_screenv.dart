@@ -2,18 +2,12 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../widgets/carta_widget.dart';
-import '../widgets/carta_mini_widget.dart';
-import '../core/jugador_helpers.dart';
-import '../core/quimica.dart';
-import '../core/rating.dart';
-import '../core/tema_juego.dart';
-import '../core/catalogos_juego.dart';
-import '../widgets/selector_agente_sheet.dart';
-import '../widgets/combo_tactico_sheet.dart';
-import '../core/combos.dart';
-import '../widgets/encabezado_widget.dart';
-import '../widgets/selector_cartas_sheet.dart';
+import '../widgets/cartas_widgets.dart';
+import '../core/jugadores.dart';
+import '../core/visual.dart';
+import '../core/mecanicas.dart';
+import '../widgets/sheets_partida.dart';
+import '../widgets/panel_pincelado.dart';
 
 
 const List<double> _kMatrizGrisEvento = <double>[
@@ -41,8 +35,8 @@ class _Tarjeta extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: TemaJuego.fondoPanel,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borde),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: borde, width: 2.0),
       ),
       child: child,
     );
@@ -62,21 +56,26 @@ class _BotonPrincipal extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 54,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: TemaJuego.rojo,
-          disabledBackgroundColor: Colors.white12,
-          elevation: activo ? 4 : 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: PanelPincelado(
+        onTap: onPressed,
+        colorBase: activo ? TemaJuego.rojo : Colors.white12,
+        colorAcento: activo ? Colors.white : Colors.white24,
+        corte: 16,
+        grosorBorde: activo ? 2.4 : 1.4,
+        gradiente: LinearGradient(
+          colors: activo
+              ? [TemaJuego.rojo, TemaJuego.rojo.withOpacity(0.85)]
+              : [Colors.white12, Colors.white10],
         ),
-        onPressed: onPressed,
-        child: Text(
-          texto,
-          style: TextStyle(
-            color: activo ? Colors.white : Colors.white38,
-            fontWeight: FontWeight.bold,
-            fontSize: 15.5,
-            letterSpacing: 0.8,
+        child: Center(
+          child: Text(
+            texto,
+            style: TextStyle(
+              color: activo ? Colors.white : Colors.white38,
+              fontWeight: FontWeight.bold,
+              fontSize: 15.5,
+              letterSpacing: 0.8,
+            ),
           ),
         ),
       ),
@@ -454,7 +453,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: activo ? TemaJuego.dorado : Colors.transparent,
-              border: Border.all(color: activo ? TemaJuego.dorado : Colors.white30, width: 1),
+              border: Border.all(color: activo ? TemaJuego.dorado : Colors.white30, width: 1.8),
               boxShadow: activo ? [BoxShadow(color: TemaJuego.dorado.withOpacity(0.6), blurRadius: 4)] : null,
             ),
           ),
@@ -484,7 +483,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: TemaJuego.rojo.withOpacity(0.12),
-                  border: Border.all(color: TemaJuego.rojo.withOpacity(0.6), width: 1.5),
+                  border: Border.all(color: TemaJuego.rojo.withOpacity(0.6), width: 2.5),
                 ),
                 child: const Center(
                   child: Text(
@@ -574,7 +573,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(3),
                       boxShadow: [BoxShadow(color: TemaJuego.dorado.withOpacity(0.35), blurRadius: 8)],
                     ),
                     child: CartaWidget(jugador: carta, width: 100),
@@ -588,8 +587,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                 child: Container(
                   decoration: BoxDecoration(
                     color: TemaJuego.fondoPanel,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: TemaJuego.borde, width: 1.5),
+                    borderRadius: BorderRadius.circular(3),
+                    border: Border.all(color: TemaJuego.borde, width: 2.5),
                   ),
                   child: Center(
                     child: estaRevelando
@@ -607,7 +606,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: TemaJuego.rojo.withOpacity(0.12),
-                                  border: Border.all(color: TemaJuego.rojo.withOpacity(0.5)),
+                                  border: Border.all(color: TemaJuego.rojo.withOpacity(0.5), width: 2.0),
                                 ),
                                 child: Icon(Icons.add, color: TemaJuego.rojo.withOpacity(0.9), size: 20),
                               ),
@@ -677,7 +676,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
           children: [
             Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(3),
                 boxShadow: [BoxShadow(color: TemaJuego.dorado.withOpacity(0.4), blurRadius: 8)],
               ),
               child: CartaWidget(jugador: carta, width: 100),
@@ -691,7 +690,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                 color: TemaJuego.fondo,
                 border: Border.all(
                   color: agenteActual == null ? Colors.white24 : TemaJuego.cian,
-                  width: 1.5,
+                  width: 2.5,
                 ),
               ),
               child: agenteActual == null
@@ -745,7 +744,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
           ),
           const SizedBox(height: 8),
           ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(2),
             child: LinearProgressIndicator(
               value: (quimicaTotalEquipo(_seleccionados) / 15).clamp(0.0, 1.0),
               minHeight: 6,
@@ -824,8 +823,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
           decoration: BoxDecoration(
             color: Colors.black.withOpacity(0.55),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white12),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: Colors.white12, width: 2.0),
           ),
           child: Column(
             children: [
@@ -859,8 +858,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
                           color: TemaJuego.fondoPanel,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: TemaJuego.dorado.withOpacity(0.5)),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: TemaJuego.dorado.withOpacity(0.5), width: 2.0),
                         ),
                         child: Text(
                           _rondaActual == 0 ? 'PREPARANDO' : 'RONDA $_rondaActual',
@@ -909,7 +908,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: TemaJuego.fondoPanel,
-            border: Border.all(color: color, width: 2),
+            border: Border.all(color: color, width: 2.5),
           ),
           child: Icon(icono, color: color, size: 22),
         ),
@@ -969,7 +968,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: esActual ? TemaJuego.cian : TemaJuego.fondoPanel,
-              border: Border.all(color: esActual ? TemaJuego.cian : Colors.white38, width: 1.4),
+              border: Border.all(color: esActual ? TemaJuego.cian : Colors.white38, width: 2.5),
               boxShadow: esActual ? [BoxShadow(color: TemaJuego.cian.withOpacity(0.7), blurRadius: 6)] : null,
             ),
           ),
@@ -1005,7 +1004,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
             Container(
               height: 6,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(2),
                 gradient: const LinearGradient(colors: [TemaJuego.rojoOscuro, Colors.white12, TemaJuego.dorado]),
               ),
             ),
@@ -1036,8 +1035,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
         padding: const EdgeInsets.symmetric(vertical: 34),
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white12),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: Colors.white12, width: 2.0),
         ),
         child: const Center(
           child: Text('La partida está por comenzar...', style: TextStyle(color: Colors.white38, fontSize: 12.5)),
@@ -1060,8 +1059,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
         padding: const EdgeInsets.fromLTRB(20, 26, 20, 22),
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.55),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white12),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: Colors.white12, width: 2.0),
         ),
         child: Column(
           children: [
@@ -1071,7 +1070,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: TemaJuego.fondo,
-                border: Border.all(color: TemaJuego.cian, width: 2),
+                border: Border.all(color: TemaJuego.cian, width: 2.5),
               ),
               child: Icon(
                 enVivo ? Icons.bolt : (gano ? Icons.check : Icons.close),
@@ -1134,7 +1133,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
       children: [
         Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(3),
             boxShadow: [BoxShadow(color: colorAccion.withOpacity(0.45), blurRadius: 10)],
           ),
           child: SizedBox(
@@ -1182,8 +1181,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   color: TemaJuego.fondoPanel,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.white24),
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(color: Colors.white24, width: 2.0),
                 ),
                 child: const Icon(Icons.question_mark, color: Colors.white24, size: 20),
               ),
@@ -1246,8 +1245,8 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: TemaJuego.dorado.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: TemaJuego.dorado.withOpacity(0.4)),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: TemaJuego.dorado.withOpacity(0.4), width: 2.0),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,

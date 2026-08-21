@@ -1,6 +1,4 @@
-/// Helpers puros para leer atributos de un jugador (Map crudo desde Supabase).
-/// Antes esto estaba copiado y pegado en partida_rapida, partida_completa y
-/// torneo_partido_screenv.dart.
+/// Helpers puros para leer atributos de un jugador (Map desde Supabase)
 
 typedef Jugador = Map<String, dynamic>;
 
@@ -19,7 +17,7 @@ bool esHeroe(Jugador j) => rarezaDe(j) == 'heroe';
 
 int ovrDe(Jugador j) => ((j['ovr'] ?? 0) as num).toInt();
 
-/// Ruta al logo de equipo/héroe/icono, usada por carta_widget y carta_mini_widget.
+/// Ruta al logo de equipo/héroe/icono
 String rutaLogoEquipo(Jugador j) {
   if (esIcono(j)) return 'assets/valorant/equipos/logo/icono.png';
   if (esHeroe(j)) {

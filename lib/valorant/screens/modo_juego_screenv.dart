@@ -1,8 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'partida_rapida_screenv.dart';
 import 'partida_completa_screenv.dart';
 import 'modo_torneo_screenv.dart';
+import '../widgets/panel_pincelado.dart';
 
 const Color _kFondo = Color(0xFF0B0C10);
 const Color _kFondoProfundo = Color(0xFF060708);
@@ -114,35 +114,13 @@ class ModoJuegoScreen extends StatelessWidget {
     Color bordeAcento = Colors.white,
     double bordeOpacidad = 0.10,
   }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(borderRadius),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.white.withOpacity(0.08), _kPanel.withOpacity(0.55)],
-            ),
-            border: Border.all(color: bordeAcento.withOpacity(bordeOpacidad), width: 1.2),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 5)),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(borderRadius),
-              onTap: onTap,
-              splashColor: _kPlata.withOpacity(0.08),
-              highlightColor: Colors.white.withOpacity(0.03),
-              child: child,
-            ),
-          ),
-        ),
-      ),
+    return PanelPincelado(
+      onTap: onTap,
+      colorBase: _kPanel,
+      colorAcento: bordeAcento == Colors.white ? _kPlata : bordeAcento,
+      corte: 18,
+      grosorBorde: 2.2,
+      child: child,
     );
   }
 

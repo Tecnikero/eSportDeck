@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../widgets/carta_widget.dart';
-import '../widgets/carta_mini_widget.dart';
-import '../widgets/sesion_dialog.dart';
+import '../widgets/cartas_widgets.dart';
+import '../widgets/dialogos_cuenta.dart';
 import '../providers/perfil_provider.dart';
+import '../widgets/panel_pincelado.dart';
 
 enum _OrdenOvr { ninguno, descendente, ascendente }
 
@@ -144,7 +144,7 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
       context: context,
       builder: (context) => Dialog(
         backgroundColor: _kFondoPanel,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         child: Padding(
           padding: const EdgeInsets.all(22),
           child: Column(
@@ -167,26 +167,31 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.white24),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: PanelPincelado(
+                      onTap: () => Navigator.of(context).pop(false),
+                      colorBase: Colors.transparent,
+                      colorAcento: Colors.white24,
+                      corte: 12,
+                      grosorBorde: 1.4,
+                      gradiente: const LinearGradient(colors: [Colors.transparent, Colors.transparent]),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: const Center(
+                        child: Text('Cancelar', style: TextStyle(color: Colors.white70)),
                       ),
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _kDorado,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: PanelPincelado(
+                      onTap: () => Navigator.of(context).pop(true),
+                      colorBase: _kDorado,
+                      colorAcento: Colors.black,
+                      corte: 12,
+                      grosorBorde: 1.8,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: const Center(
+                        child: Text('Vender', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
                       ),
-                      onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text('Vender', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],
@@ -467,15 +472,15 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                           fillColor: _kFondoPanel,
                           contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(3),
                             borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(3),
                             borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(3),
                             borderSide: const BorderSide(color: _kDorado, width: 1.2),
                           ),
                         ),
@@ -612,8 +617,8 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                                       decoration: BoxDecoration(
                                         color: const Color(0xFFFFD700),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(color: const Color(0xFF050914), width: 2),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(color: const Color(0xFF050914), width: 2.5),
                                       ),
                                       child: Text(
                                         'x$cantidad',
@@ -666,8 +671,8 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFFFD700),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: const Color(0xFF050914), width: 2),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: const Color(0xFF050914), width: 2.5),
                                     ),
                                     child: Text(
                                       'x${_cartaSeleccionada!['_cantidad']}',
@@ -682,19 +687,25 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                             ],
                           ),
                           const SizedBox(height: 20),
-                          ElevatedButton.icon(
-                            onPressed: () => _venderCarta(_cartaSeleccionada!),
-                            icon: const Icon(Icons.sell, color: Colors.black),
-                            label: Text(
-                              (_cartaSeleccionada!['_cantidad'] as int? ?? 1) > 1
-                                  ? 'Vender 1 copia por \$${_precioVenta(_cartaSeleccionada!)}'
-                                  : 'Vender por \$${_precioVenta(_cartaSeleccionada!)}',
-                              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFFD700),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          PanelPincelado(
+                            onTap: () => _venderCarta(_cartaSeleccionada!),
+                            colorBase: const Color(0xFFFFD700),
+                            colorAcento: Colors.black,
+                            corte: 12,
+                            grosorBorde: 1.8,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.sell, color: Colors.black),
+                                const SizedBox(width: 8),
+                                Text(
+                                  (_cartaSeleccionada!['_cantidad'] as int? ?? 1) > 1
+                                      ? 'Vender 1 copia por \$${_precioVenta(_cartaSeleccionada!)}'
+                                      : 'Vender por \$${_precioVenta(_cartaSeleccionada!)}',
+                                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -721,12 +732,15 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
+          SizedBox(
             width: 56,
             height: 56,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: (activo || expandido)
+            child: PanelPincelado(
+              colorBase: (activo || expandido) ? _kPlataOscuro : const Color(0xFF17181B),
+              colorAcento: (activo || expandido) ? _kPlata : Colors.white,
+              corte: 14,
+              grosorBorde: (activo || expandido) ? 2.0 : 1.4,
+              gradiente: (activo || expandido)
                   ? const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -737,21 +751,8 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                       end: Alignment.bottomRight,
                       colors: [Color(0xFF2A2D32), Color(0xFF17181B)],
                     ),
-              border: Border.all(
-                color: (activo || expandido)
-                    ? Colors.white.withOpacity(0.5)
-                    : Colors.white.withOpacity(0.10),
-                width: (activo || expandido) ? 1.5 : 1.0,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.35),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+              child: Center(child: contenido),
             ),
-            child: ClipOval(child: Center(child: contenido)),
           ),
           const SizedBox(height: 4),
           Row(
@@ -902,12 +903,15 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
+            SizedBox(
               width: 50,
               height: 50,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: activo
+              child: PanelPincelado(
+                colorBase: activo ? _kPlataOscuro : const Color(0xFF17181B),
+                colorAcento: activo ? _kPlata : Colors.white,
+                corte: 13,
+                grosorBorde: activo ? 2.0 : 1.4,
+                gradiente: activo
                     ? const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -918,19 +922,8 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
                         end: Alignment.bottomRight,
                         colors: [Color(0xFF2A2D32), Color(0xFF17181B)],
                       ),
-                border: Border.all(
-                  color: activo ? Colors.white.withOpacity(0.5) : Colors.white.withOpacity(0.10),
-                  width: activo ? 1.5 : 1.0,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.35),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
+                child: Center(child: child),
               ),
-              child: ClipOval(child: Center(child: child)),
             ),
             const SizedBox(height: 4),
             Text(
@@ -961,26 +954,30 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
       child: GestureDetector(
         onTap: () => _confirmarVenderTodasLasRepetidas(repetidas),
-        child: Container(
+        child: SizedBox(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          decoration: BoxDecoration(
-            color: _kDorado.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _kDorado.withOpacity(0.55), width: 1.2),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.sell, color: _kDorado, size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Tienes $totalCopias cartas repetidas · véndelas todas por \$$totalGanado',
-                  style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
+          child: PanelPincelado(
+            colorBase: _kDorado,
+            colorAcento: _kDorado,
+            corte: 12,
+            grosorBorde: 2.2,
+            gradiente: LinearGradient(
+              colors: [_kDorado.withOpacity(0.10), _kFondoPanel.withOpacity(0.6)],
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            child: Row(
+              children: [
+                const Icon(Icons.sell, color: _kDorado, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Tienes $totalCopias cartas repetidas · véndelas todas por \$$totalGanado',
+                    style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
+                  ),
                 ),
-              ),
-              const Icon(Icons.chevron_right, color: _kDorado),
-            ],
+                const Icon(Icons.chevron_right, color: _kDorado),
+              ],
+            ),
           ),
         ),
       ),
@@ -997,25 +994,15 @@ class _ColeccionScreenState extends State<ColeccionScreen> {
 
     return GestureDetector(
       onTap: _alternarOrdenOvr,
-      child: Container(
+      child: PanelPincelado(
+        colorBase: activo ? _kPlataOscuro : const Color(0xFF17181B),
+        colorAcento: activo ? _kPlata : Colors.white,
+        corte: 10,
+        grosorBorde: activo ? 2.0 : 1.4,
+        gradiente: activo
+            ? const LinearGradient(colors: [_kPlata, _kPlataOscuro])
+            : const LinearGradient(colors: [Color(0xFF2A2D32), Color(0xFF17181B)]),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: activo
-              ? const LinearGradient(colors: [_kPlata, _kPlataOscuro])
-              : const LinearGradient(colors: [Color(0xFF2A2D32), Color(0xFF17181B)]),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(
-            color: activo ? Colors.white.withOpacity(0.5) : Colors.white.withOpacity(0.10),
-            width: activo ? 1.5 : 1.0,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.35),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

@@ -1,9 +1,9 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'sobre_detalle_screenv.dart';
 import '../providers/perfil_provider.dart';
-import '../widgets/racha_dialog.dart';
+import '../widgets/dialogos_cuenta.dart' hide BotonCerrarSesion;
+import '../widgets/panel_pincelado.dart';
 
 const Color _kFondo = Color(0xFF0B0C10);
 const Color _kPanel = Color(0xFF1C1E22);
@@ -98,6 +98,26 @@ const List<Map<String, dynamic>> tiposSobre = [
     'garantia': false,
     'limite_diario': 1,
     'descripcion': '2 cartas. Al menos 1 Team Of Stage garantizado.',
+  },
+  {
+    'id': 'sobre_prime',
+    'nombre': 'Sobre Prime',
+    'precio': 6000,
+    'cantidad_cartas': 3,
+    'icono': Icons.emoji_events,
+    'imagen': 'assets/valorant/sobres/sobre_torneo.png',
+    'color': Color(0xFF4A90D9),
+    'rarezas': ['Normal', 'icono', 'heroe', 'tos1', 'tos2', 'flashback', 'promesa', 'icono_prime'],
+    'tramos': _tramosPremium,
+    'peso_rarezas': {
+      'normal': 90,
+      'flashback': 5,
+      'icono_prime': 5,
+    },
+    'garantia_tipos': ['flashback', 'icono_prime'],
+    'garantia': false,
+    'limite_diario': 2,
+    'descripcion': '3 cartas. Al menos 1 carta de un jugador en su mejor momento.',
   },
 ];
 
@@ -380,17 +400,12 @@ class _TiendaScreenState extends State<TiendaScreen> {
   }
 
   Widget _chipMetalico({required IconData icono, required String valor}) {
-    return Container(
+    return PanelPincelado(
+      colorBase: const Color(0xFF202226),
+      colorAcento: _kDorado,
+      corte: 9,
+      grosorBorde: 1.6,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF2A2D32), Color(0xFF17181B)],
-        ),
-        border: Border.all(color: Colors.white.withOpacity(0.10)),
-      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -409,35 +424,13 @@ class _TiendaScreenState extends State<TiendaScreen> {
     Color bordeAcento = Colors.white,
     double bordeOpacidad = 0.10,
   }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(borderRadius),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.white.withOpacity(0.08), _kPanel.withOpacity(0.55)],
-            ),
-            border: Border.all(color: bordeAcento.withOpacity(bordeOpacidad), width: 1.2),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 5)),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(borderRadius),
-              onTap: onTap,
-              splashColor: _kPlata.withOpacity(0.08),
-              highlightColor: Colors.white.withOpacity(0.03),
-              child: child,
-            ),
-          ),
-        ),
-      ),
+    return PanelPincelado(
+      onTap: onTap,
+      colorBase: _kPanel,
+      colorAcento: bordeAcento == Colors.white ? _kPlata : bordeAcento,
+      corte: 16,
+      grosorBorde: 2.2,
+      child: child,
     );
   }
 
@@ -503,22 +496,16 @@ class _TiendaScreenState extends State<TiendaScreen> {
   }
 
   Widget _botonMetalico(String texto, VoidCallback onPressed) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onPressed,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            gradient: const LinearGradient(colors: [_kPlata, _kPlataOscuro]),
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
-          ),
-          child: Text(texto,
-              style: const TextStyle(color: Color(0xFF17181B), fontWeight: FontWeight.bold, fontSize: 12)),
-        ),
-      ),
+    return PanelPincelado(
+      onTap: onPressed,
+      colorBase: _kPlataOscuro,
+      colorAcento: Colors.white,
+      corte: 10,
+      grosorBorde: 2.0,
+      gradiente: const LinearGradient(colors: [_kPlata, _kPlataOscuro]),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+      child: Text(texto,
+          style: const TextStyle(color: Color(0xFF17181B), fontWeight: FontWeight.bold, fontSize: 12)),
     );
   }
 
@@ -575,15 +562,15 @@ class _TiendaScreenState extends State<TiendaScreen> {
                     ),
                   ],
                   const SizedBox(height: 12),
-                  Container(
+                  PanelPincelado(
+                    colorBase: disponible ? _kPlataOscuro : Colors.white12,
+                    colorAcento: Colors.white,
+                    corte: 10,
+                    grosorBorde: 1.8,
+                    gradiente: LinearGradient(colors: disponible
+                        ? [_kPlata, _kPlataOscuro]
+                        : [Colors.white24, Colors.white12]),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(30),
-                      gradient: LinearGradient(colors: disponible
-                          ? [_kPlata, _kPlataOscuro]
-                          : [Colors.white24, Colors.white12]),
-                      border: Border.all(color: Colors.white.withOpacity(0.3)),
-                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

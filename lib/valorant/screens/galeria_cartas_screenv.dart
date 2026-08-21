@@ -1,8 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../widgets/carta_widget.dart';
-import '../widgets/carta_mini_widget.dart';
+import '../widgets/cartas_widgets.dart';
+import '../widgets/panel_pincelado.dart';
 
 const Color _kFondo = Color(0xFF0B0C10);
 const Color _kFondoPanel = Color(0xFF1C1E22);
@@ -14,6 +14,7 @@ const List<Map<String, String>> _rarezas = [
   {'valor': 'todas', 'etiqueta': 'TODAS'},
   {'valor': 'normal', 'etiqueta': 'NORMAL'},
   {'valor': 'icono', 'etiqueta': 'ICONO'},
+  {'valor': 'icono_prime', 'etiqueta': 'ICONO PRIME'},
   {'valor': 'heroe', 'etiqueta': 'HEROE'},
   {'valor': 'flashback', 'etiqueta': 'FLASHBACK'},
   {'valor': 'promesa', 'etiqueta': 'PROMESA'},
@@ -183,19 +184,19 @@ class _GaleriaCartasScreenState extends State<GaleriaCartasScreen> {
 
   Widget _buildProgreso(int descubiertas, int total, double progreso) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(4),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        filter: ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(4),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [Colors.white.withOpacity(0.06), _kFondoPanel.withOpacity(0.6)],
             ),
-            border: Border.all(color: Colors.white.withOpacity(0.10)),
+            border: Border.all(color: Colors.white.withOpacity(0.10), width: 2.0),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,7 +218,7 @@ class _GaleriaCartasScreenState extends State<GaleriaCartasScreen> {
               ),
               const SizedBox(height: 10),
               ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(3),
                 child: LinearProgressIndicator(
                   value: progreso,
                   minHeight: 8,
@@ -254,15 +255,15 @@ class _GaleriaCartasScreenState extends State<GaleriaCartasScreen> {
         fillColor: _kFondoPanel,
         contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(3),
           borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(3),
           borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(3),
           borderSide: const BorderSide(color: _kDorado, width: 1.2),
         ),
       ),
@@ -281,24 +282,24 @@ class _GaleriaCartasScreenState extends State<GaleriaCartasScreen> {
           final activo = _rarezaFiltro == r['valor'];
           return GestureDetector(
             onTap: () => setState(() => _rarezaFiltro = r['valor']!),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
+            child: PanelPincelado(
+              colorBase: activo ? _kPlataOscuro : _kFondoPanel,
+              colorAcento: activo ? _kPlata : Colors.white,
+              corte: 9,
+              grosorBorde: activo ? 1.8 : 1.2,
+              gradiente: activo
+                  ? const LinearGradient(colors: [_kPlata, _kPlataOscuro])
+                  : const LinearGradient(colors: [Color(0xFF1C1E22), Color(0xFF1C1E22)]),
               padding: const EdgeInsets.symmetric(horizontal: 14),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                gradient: activo
-                    ? const LinearGradient(colors: [_kPlata, _kPlataOscuro])
-                    : const LinearGradient(colors: [Color(0xFF1C1E22), Color(0xFF1C1E22)]),
-                border: Border.all(color: activo ? Colors.white.withOpacity(0.5) : Colors.white.withOpacity(0.10)),
-              ),
-              child: Text(
-                r['etiqueta']!,
-                style: TextStyle(
-                  color: activo ? const Color(0xFF17181B) : Colors.white54,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 11.5,
-                  letterSpacing: 0.5,
+              child: Center(
+                child: Text(
+                  r['etiqueta']!,
+                  style: TextStyle(
+                    color: activo ? const Color(0xFF17181B) : Colors.white54,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11.5,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
             ),
@@ -332,7 +333,7 @@ class _GaleriaCartasScreenState extends State<GaleriaCartasScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.black.withOpacity(0.55),
-                border: Border.all(color: Colors.white24),
+                border: Border.all(color: Colors.white24, width: 2.0),
               ),
               child: const Icon(Icons.lock, color: Colors.white70, size: 20),
             ),
@@ -374,8 +375,8 @@ class _GaleriaCartasScreenState extends State<GaleriaCartasScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                     decoration: BoxDecoration(
                       color: _kFondoPanel,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white24),
+                      borderRadius: BorderRadius.circular(3),
+                      border: Border.all(color: Colors.white24, width: 2.0),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,

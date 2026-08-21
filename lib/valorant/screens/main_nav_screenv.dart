@@ -5,9 +5,9 @@ import 'galeria_cartas_screenv.dart';
 import 'tienda_screenv.dart';
 import 'modo_juego_screenv.dart';
 import '../providers/perfil_provider.dart';
-import '../widgets/racha_dialog.dart';
-import '../widgets/actualizacion_dialog.dart';
-import '../widgets/sesion_dialog.dart';
+import '../widgets/sheets_partida.dart' hide BotonCerrarSesion;
+import '../widgets/dialogos_cuenta.dart';
+import '../widgets/panel_pincelado.dart';
 
 const Color _kFondo = Color(0xFF0B0C10);
 const Color _kFondoProfundo = Color(0xFF060708);
@@ -145,17 +145,12 @@ class _MainNavScreenState extends State<MainNavScreen> {
     required String valor,
     Color acento = _kDorado,
   }) {
-    return Container(
+    return PanelPincelado(
+      colorBase: const Color(0xFF202226),
+      colorAcento: acento,
+      corte: 9,
+      grosorBorde: 1.6,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF2A2D32), Color(0xFF17181B)],
-        ),
-        border: Border.all(color: Colors.white.withOpacity(0.10)),
-      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -175,13 +170,13 @@ class _MainNavScreenState extends State<MainNavScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(4),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [Color(0xFF23262B), Color(0xFF141518)],
         ),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withOpacity(0.08), width: 2.0),
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,8 +212,8 @@ class _MainNavScreenState extends State<MainNavScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
             decoration: BoxDecoration(
               color: _kRojo,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _kFondo, width: 2),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: _kFondo, width: 2.5),
             ),
             child: Text(
               '$total',
@@ -239,29 +234,13 @@ class _MainNavScreenState extends State<MainNavScreen> {
     required VoidCallback onTap,
     double borderRadius = 22,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(borderRadius),
-        color: _kPanel.withOpacity(0.7),
-        border: Border.all(color: _kPlata.withOpacity(0.16), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(borderRadius),
-          onTap: onTap,
-          splashColor: _kPlata.withOpacity(0.08),
-          highlightColor: Colors.white.withOpacity(0.03),
-          child: child,
-        ),
-      ),
+    return PanelPincelado(
+      onTap: onTap,
+      colorBase: _kPanel,
+      colorAcento: _kPlata,
+      corte: 20,
+      grosorBorde: 2.4,
+      child: child,
     );
   }
 
@@ -271,7 +250,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: _kPlataOscuro.withOpacity(0.5),
-        border: Border.all(color: _kPlata.withOpacity(0.3)),
+        border: Border.all(color: _kPlata.withOpacity(0.3), width: 2.0),
       ),
       child: Icon(icono, color: _kPlata, size: size),
     );

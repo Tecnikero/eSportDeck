@@ -1,4 +1,27 @@
-import 'jugador_helpers.dart';
+import 'package:flutter/material.dart';
+
+import 'jugadores.dart';
+
+// ============================================================================
+// TEMA
+// ============================================================================
+
+class TemaJuego {
+  static const Color fondo = Color(0xFF0A0A0A);
+  static const Color fondoPanel = Color(0xFF1A0E0E);
+  static const Color rojo = Color(0xFFE30425);
+  static const Color rojoOscuro = Color(0xFF7A0000);
+  static const Color dorado = Color(0xFFFFD700);
+  static const Color textoSuave = Color(0xFFB9B4B4);
+  static const Color borde = Color(0x33FFFFFF);
+  static const Color cian = Color(0xFF29E0E0);
+  static const Color ataque = Color(0xFFFF4B4B);
+  static const Color defensa = Color(0xFF4B9CFF);
+}
+
+// ============================================================================
+// CARTAS
+// ============================================================================
 
 const int kUmbralOvrOro = 79;
 
@@ -14,7 +37,6 @@ const Map<String, String> _fondosGrandePorRareza = {
 const Map<String, String> _fondosMiniPorRareza = {
   'icono': 'assets/valorant/cartas/carta_icono_mini.png',
   'heroe': 'assets/valorant/cartas/carta_heroe_mini.png',
-  // Nota: en la version mini, tos1 y tos2 comparten el mismo asset.
   'tos1': 'assets/valorant/cartas/carta_tos_mini.png',
   'tos2': 'assets/valorant/cartas/carta_tos_mini.png',
   'flashback': 'assets/valorant/cartas/carta_flashback_mini.png',
@@ -26,7 +48,7 @@ const String _normalPlataGrande = 'assets/valorant/cartas/carta_normal_plata.png
 const String _normalOroMini = 'assets/valorant/cartas/carta_normal_oro_mini.png';
 const String _normalPlataMini = 'assets/valorant/cartas/carta_normal_plata_mini.png';
 
-/// Ruta al fondo de la carta grande (carta_widget.dart).
+/// Ruta al fondo de la carta grande.
 String rutaFondoCarta(Jugador j) {
   final rareza = rarezaDe(j);
   if (rareza == 'normal') {
@@ -35,7 +57,7 @@ String rutaFondoCarta(Jugador j) {
   return _fondosGrandePorRareza[rareza] ?? _normalPlataGrande;
 }
 
-/// Ruta al fondo de la mini-carta (carta_mini_widget.dart / galeria).
+/// Ruta al fondo de la mini-carta.
 String rutaFondoCartaMini(Jugador j) {
   final rareza = rarezaDe(j);
   if (rareza == 'normal') {

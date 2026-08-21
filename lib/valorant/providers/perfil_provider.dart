@@ -3,19 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-const List<int> _recompensasPorDiaDeRacha = [50, 60, 75, 90, 110, 140, 250];
+const List<int> _recompensasPorDiaDeRacha = [100, 150, 300, 500, 700, 1500, 2500];
 
-// Tiempo mínimo entre recargas reales a Supabase para el perfil (dinero,
-// racha). sobresPendientes y el cooldown de compras ya NO se cargan desde
-// Supabase nunca: viven 100% en el dispositivo (SharedPreferences).
 const Duration _ttlCache = Duration(minutes: 3);
 
 const String _kPrefsPrefix = 'perfil_cache_';
 
-// Hora del día (0-23, hora local del dispositivo) en la que se reinician
-// los límites diarios de compra. Ej: 12 -> se reinicia todos los días a
-// las 12:00. Antes de esa hora, se compara contra el reinicio de "ayer";
-// después, contra el de "hoy".
 const int _horaReinicioDiario = 12;
 
 class PerfilProvider extends ChangeNotifier {
@@ -31,11 +24,8 @@ class PerfilProvider extends ChangeNotifier {
 
   Map<String, Map<String, int>> _pity = {};
 
-  // sobreId -> cantidad. 100% local.
   Map<String, int> _sobresPendientes = {};
 
-  // sobreId -> lista de timestamps (ISO8601) de compras/reclamos en la
-  // ventana de las últimas 24h. 100% local.
   Map<String, List<DateTime>> _comprasPorSobre = {};
 
   DateTime? _ultimaCargaExitosa;
@@ -56,15 +46,12 @@ class PerfilProvider extends ChangeNotifier {
   int get totalSobresPendientes => _sobresPendientes.values.fold(0, (s, c) => s + c);
   int cantidadSobrePendiente(String sobreId) => _sobresPendientes[sobreId] ?? 0;
 
-  /// Inicio del ciclo diario "actual": hoy a las [_horaReinicioDiario] si ya
-  /// pasó esa hora, o ayer a esa hora si todavía no llega.
   DateTime _inicioCicloActual([DateTime? ahora]) {
     final now = ahora ?? DateTime.now();
     final hoyReinicio = DateTime(now.year, now.month, now.day, _horaReinicioDiario);
     return now.isBefore(hoyReinicio) ? hoyReinicio.subtract(const Duration(days: 1)) : hoyReinicio;
   }
 
-  /// Momento en que se reinicia el ciclo actual (el próximo "12:00", etc).
   DateTime _finCicloActual([DateTime? ahora]) =>
       _inicioCicloActual(ahora).add(const Duration(days: 1));
 
@@ -74,7 +61,6 @@ class PerfilProvider extends ChangeNotifier {
     final inicio = _inicioCicloActual();
     final vigentes = lista.where((t) => !t.isBefore(inicio)).toList()..sort();
     if (vigentes.length != lista.length) {
-      // limpiamos las viejas para no arrastrar la lista creciendo para siempre
       _comprasPorSobre[sobreId] = vigentes;
     }
     return vigentes;
@@ -103,8 +89,6 @@ class PerfilProvider extends ChangeNotifier {
       _ultimaCargaExitosa != null &&
       DateTime.now().difference(_ultimaCargaExitosa!) < _ttlCache;
 
-  /// Carga el perfil (dinero, racha, pity). sobresPendientes y el cooldown
-  /// de compras NUNCA se piden a Supabase: se leen del disco local.
   Future<void> cargar({bool forzar = false}) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return;
@@ -150,13 +134,6 @@ class PerfilProvider extends ChangeNotifier {
     }
   }
 
-  /// Compra un sobre. El dinero sigue siendo server-authoritative (RPC).
-  /// El límite diario / cooldown se calcula y se aplica 100% en el cliente.
-  ///
-  /// IMPORTANTE: si tu función SQL `fn_comprar_sobre` todavía valida el
-  /// límite diario contra una tabla, tienes que simplificarla para que sólo
-  /// descuente dinero (ver nota en el chat). Si no, puede rechazar compras
-  /// que el cliente ya consideró válidas, o viceversa.
   Future<ResultadoCompraSobre> comprarSobre({
     required String sobreId,
     required int precio,
@@ -167,7 +144,6 @@ class PerfilProvider extends ChangeNotifier {
       return ResultadoCompraSobre(ok: false, motivo: MotivoFalloCompra.sinSesion);
     }
 
-    // Chequeo local del límite diario, antes de gastar dinero.
     if (!puedeComprar(sobreId, limiteDiario)) {
       return ResultadoCompraSobre(
         ok: false,
@@ -198,8 +174,6 @@ class PerfilProvider extends ChangeNotifier {
     }
   }
 
-  /// Reclama un sobre gratis (por anuncio, etc). El límite diario se valida
-  /// 100% local; no se llama a ninguna RPC de límite.
   Future<ResultadoCompraSobre> reclamarSobreAnuncio({
     required String sobreId,
     int limiteDiario = 1,
@@ -288,9 +262,9 @@ class PerfilProvider extends ChangeNotifier {
     }
   }
 
-  // ---------------------------------------------------------------------
-  // Sobres pendientes: 100% local, sin Supabase.
-  // ---------------------------------------------------------------------
+  // ============================================================================
+  // Sobres pendientes
+  // ============================================================================
 
   Future<String?> agregarSobrePendienteConError(String sobreId, {int cantidad = 1}) async {
     final userId = _supabase.auth.currentUser?.id;
@@ -336,9 +310,9 @@ class PerfilProvider extends ChangeNotifier {
     if (userId != null) unawaited(_guardarEnDisco(userId));
   }
 
-  // ---------------------------------------------------------------------
-  // Caché / almacenamiento local (SharedPreferences)
-  // ---------------------------------------------------------------------
+  // ============================================================================
+  // almacenamiento local
+  // ============================================================================
 
   String _clave(String userId) => '$_kPrefsPrefix$userId';
 
@@ -418,8 +392,6 @@ class PerfilProvider extends ChangeNotifier {
   }
 }
 
-// Helper mínimo para descartar Futures de forma explícita sin depender de
-// otro paquete solo por `unawaited`.
 void unawaited(Future<void> future) {}
 
 enum MotivoFalloCompra { sinDinero, limiteDiario, sinSesion, error }

@@ -4,9 +4,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../widgets/carta_widget.dart';
-import '../widgets/carta_mini_widget.dart';
+import '../widgets/cartas_widgets.dart';
 import '../providers/perfil_provider.dart';
+import '../widgets/panel_pincelado.dart';
 
 enum _EfectoRareza { ninguno, plata, violeta, dorado }
 
@@ -1015,7 +1015,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                 height: 150,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: Colors.white54, blurRadius: 40, spreadRadius: 20)],
+                  boxShadow: [BoxShadow(color: Colors.white54, blurRadius: 20, spreadRadius: 20)],
                 ),
               )
             ],
@@ -1076,7 +1076,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                   height: 150,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withOpacity(0.8), width: 4),
+                    border: Border.all(color: Colors.white.withOpacity(0.8), width: 2.5),
                   ),
                 ),
               ),
@@ -1217,9 +1217,9 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                       height: 54,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(15),
+                          borderRadius: BorderRadius.circular(3),
                           color: Colors.white12,
-                          border: Border.all(color: Colors.white.withOpacity(0.15)),
+                          border: Border.all(color: Colors.white.withOpacity(0.15), width: 2.0),
                         ),
                         child: const Center(
                           child: Text(
@@ -1237,40 +1237,36 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
               return SizedBox(
               width: double.infinity,
               height: 54,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(15),
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [_kPlataUI, _kPlataOscuraUI],
-                  ),
-                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+              child: PanelPincelado(
+                onTap: _requiereAnuncio ? _reclamarSobrePorAnuncio : _comprar,
+                colorBase: _kPlataOscuraUI,
+                colorAcento: Colors.white,
+                corte: 16,
+                grosorBorde: 2.4,
+                gradiente: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [_kPlataUI, _kPlataOscuraUI],
                 ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(15),
-                    onTap: _requiereAnuncio ? _reclamarSobrePorAnuncio : _comprar,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _requiereAnuncio
-                              ? Icons.card_giftcard
-                              : (widget.esPendiente ? Icons.card_giftcard : Icons.monetization_on),
-                          color: const Color(0xFF17181B),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _requiereAnuncio
-                              ? 'RECLAMAR GRATIS'
-                              : (widget.esPendiente ? 'ABRIR' : 'ABRIR 1 (${sobre['precio']})'),
-                          style: const TextStyle(
-                              color: Color(0xFF17181B), fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                      ],
-                    ),
+                child: Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _requiereAnuncio
+                            ? Icons.card_giftcard
+                            : (widget.esPendiente ? Icons.card_giftcard : Icons.monetization_on),
+                        color: const Color(0xFF17181B),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _requiereAnuncio
+                            ? 'RECLAMAR GRATIS'
+                            : (widget.esPendiente ? 'ABRIR' : 'ABRIR 1 (${sobre['precio']})'),
+                        style: const TextStyle(
+                            color: Color(0xFF17181B), fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -1281,22 +1277,25 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
               SizedBox(
                 width: double.infinity,
                 height: 54,
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: _kAcentoUI.withOpacity(0.7), width: 1.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  ),
-                  onPressed: _comprarYAbrirBulk,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.bolt, color: _kAcentoUI),
-                      const SizedBox(width: 8),
-                      Text(
-                        'ABRIR x5 ($precioBulk) · -10%',
-                        style: const TextStyle(color: _kAcentoUI, fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
-                    ],
+                child: PanelPincelado(
+                  onTap: _comprarYAbrirBulk,
+                  colorBase: Colors.transparent,
+                  colorAcento: _kAcentoUI,
+                  corte: 16,
+                  grosorBorde: 1.8,
+                  gradiente: const LinearGradient(colors: [Colors.transparent, Colors.transparent]),
+                  child: Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.bolt, color: _kAcentoUI),
+                        const SizedBox(width: 8),
+                        Text(
+                          'ABRIR x5 ($precioBulk) · -10%',
+                          style: const TextStyle(color: _kAcentoUI, fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1390,13 +1389,13 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
       width: 210,
       height: 296,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(3),
         boxShadow: [
           BoxShadow(color: color.withOpacity(0.4), blurRadius: 20),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(3),
         child: Image.asset(
           _fondoOcultoRuta,
           fit: BoxFit.cover,
@@ -1797,7 +1796,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
                             width: 68,
                             height: 46,
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(2),
                               child: Image.asset(
                                 _rutaBandera(mejorCarta),
                                 fit: BoxFit.cover,
@@ -2034,15 +2033,18 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
           child: SizedBox(
             width: double.infinity,
             height: 54,
-            child: OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: _kPlataUI.withOpacity(0.5), width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              ),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text(
-                'VOLVER A LA TIENDA',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+            child: PanelPincelado(
+              onTap: () => Navigator.pop(context, true),
+              colorBase: Colors.transparent,
+              colorAcento: _kPlataUI,
+              corte: 16,
+              grosorBorde: 1.8,
+              gradiente: const LinearGradient(colors: [Colors.transparent, Colors.transparent]),
+              child: const Center(
+                child: Text(
+                  'VOLVER A LA TIENDA',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ),
             ),
           ),

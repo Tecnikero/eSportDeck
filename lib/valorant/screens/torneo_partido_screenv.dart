@@ -1,15 +1,12 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import '../widgets/carta_widget.dart';
-import '../core/tema_juego.dart';
-import '../core/catalogos_juego.dart';
-import '../core/combos.dart';
-import '../core/rating.dart';
-import '../core/quimica.dart';
-import '../core/jugador_helpers.dart';
-import '../widgets/selector_agente_sheet.dart';
-import '../widgets/combo_tactico_sheet.dart';
+import '../widgets/cartas_widgets.dart';
+import '../core/visual.dart';
+import '../core/mecanicas.dart';
+import '../core/jugadores.dart';
+import '../widgets/sheets_partida.dart';
+import '../widgets/panel_pincelado.dart';
 
 
 const int _rondasParaGanar = 5;
@@ -261,7 +258,7 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: TemaJuego.rojo.withOpacity(0.12),
-                      border: Border.all(color: TemaJuego.rojo.withOpacity(0.6), width: 1.5),
+                      border: Border.all(color: TemaJuego.rojo.withOpacity(0.6), width: 2.5),
                     ),
                     child: const Center(
                       child: Text(
@@ -302,8 +299,8 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
                 height: 90,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: TemaJuego.borde),
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(color: TemaJuego.borde, width: 2.0),
                   image: DecorationImage(
                     image: AssetImage(_mapaActual['imagen'] ?? ''),
                     fit: BoxFit.cover,
@@ -341,8 +338,8 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: TemaJuego.fondoPanel,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: agente != null ? TemaJuego.dorado.withOpacity(0.5) : TemaJuego.borde),
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(color: agente != null ? TemaJuego.dorado.withOpacity(0.5) : TemaJuego.borde, width: 2.0),
                 ),
                 child: Row(
                   children: [
@@ -365,12 +362,14 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
                         ],
                       ),
                     ),
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: agente != null ? TemaJuego.dorado : TemaJuego.rojo),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () => _mostrarSelectorAgente(index),
+                    PanelPincelado(
+                      onTap: () => _mostrarSelectorAgente(index),
+                      colorBase: Colors.transparent,
+                      colorAcento: agente != null ? TemaJuego.dorado : TemaJuego.rojo,
+                      corte: 8,
+                      grosorBorde: 1.4,
+                      gradiente: const LinearGradient(colors: [Colors.transparent, Colors.transparent]),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       child: Text(
                         agente ?? 'ELEGIR',
                         style: TextStyle(color: agente != null ? TemaJuego.dorado : TemaJuego.rojo, fontWeight: FontWeight.bold, fontSize: 12),
@@ -387,16 +386,18 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
           child: SizedBox(
             width: double.infinity,
             height: 54,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _todosAsignados ? TemaJuego.rojo : Colors.white12,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              onPressed: _todosAsignados ? _confirmarAgentesYJugar : null,
-              child: Text(
-                _todosAsignados ? 'JUGAR PARTIDO' : 'ASIGNA A TODOS LOS AGENTES',
-                style: TextStyle(
-                    color: _todosAsignados ? Colors.white : Colors.white38, fontWeight: FontWeight.bold, fontSize: 14.5),
+            child: PanelPincelado(
+              onTap: _todosAsignados ? _confirmarAgentesYJugar : null,
+              colorBase: _todosAsignados ? TemaJuego.rojo : Colors.white12,
+              colorAcento: Colors.white,
+              corte: 16,
+              grosorBorde: _todosAsignados ? 2.4 : 1.2,
+              child: Center(
+                child: Text(
+                  _todosAsignados ? 'JUGAR PARTIDO' : 'ASIGNA A TODOS LOS AGENTES',
+                  style: TextStyle(
+                      color: _todosAsignados ? Colors.white : Colors.white38, fontWeight: FontWeight.bold, fontSize: 14.5),
+                ),
               ),
             ),
           ),
@@ -419,8 +420,8 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: TemaJuego.fondoPanel,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: TemaJuego.borde),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: TemaJuego.borde, width: 2.0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,7 +439,7 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
           ),
           const SizedBox(height: 8),
           ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(2),
             child: LinearProgressIndicator(
               value: (quimicaTotalEquipo(widget.titularesUsuario) / 15).clamp(0, 1).toDouble(),
               minHeight: 6,
@@ -486,7 +487,7 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: activo ? TemaJuego.dorado : Colors.transparent,
-              border: Border.all(color: activo ? TemaJuego.dorado : Colors.white30, width: 1),
+              border: Border.all(color: activo ? TemaJuego.dorado : Colors.white30, width: 1.8),
               boxShadow: activo ? [BoxShadow(color: TemaJuego.dorado.withOpacity(0.6), blurRadius: 4)] : null,
             ),
           ),
@@ -558,8 +559,8 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
           decoration: BoxDecoration(
             color: Colors.black.withOpacity(0.55),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white12),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: Colors.white12, width: 2.0),
           ),
           child: Column(
             children: [
@@ -606,8 +607,8 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
                           color: TemaJuego.fondoPanel,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: TemaJuego.dorado.withOpacity(0.5)),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: TemaJuego.dorado.withOpacity(0.5), width: 2.0),
                         ),
                         child: Text(
                           _rondaActual == 0 ? 'PREPARANDO' : 'RONDA $_rondaActual',
@@ -655,7 +656,7 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: TemaJuego.fondoPanel,
-            border: Border.all(color: color, width: 2),
+            border: Border.all(color: color, width: 2.5),
           ),
           child: Icon(icono, color: color, size: 22),
         ),
@@ -716,7 +717,7 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: esActual ? TemaJuego.cian : TemaJuego.fondoPanel,
-              border: Border.all(color: esActual ? TemaJuego.cian : Colors.white38, width: 1.3),
+              border: Border.all(color: esActual ? TemaJuego.cian : Colors.white38, width: 2.3),
               boxShadow: esActual ? [BoxShadow(color: TemaJuego.cian.withOpacity(0.7), blurRadius: 6)] : null,
             ),
           ),
@@ -752,7 +753,7 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
             Container(
               height: 6,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(2),
                 gradient: const LinearGradient(colors: [TemaJuego.rojoOscuro, Colors.white12, TemaJuego.dorado]),
               ),
             ),
@@ -795,8 +796,8 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
         padding: const EdgeInsets.symmetric(vertical: 34),
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white12),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: Colors.white12, width: 2.0),
         ),
         child: const Center(
           child: Text('El partido está por comenzar...', style: TextStyle(color: Colors.white38, fontSize: 12.5)),
@@ -817,8 +818,8 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
         padding: const EdgeInsets.fromLTRB(20, 26, 20, 22),
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.55),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white12),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: Colors.white12, width: 2.0),
         ),
         child: Column(
           children: [
@@ -828,7 +829,7 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: TemaJuego.fondo,
-                border: Border.all(color: TemaJuego.cian, width: 2),
+                border: Border.all(color: TemaJuego.cian, width: 2.5),
               ),
               child: Icon(
                 enVivo ? Icons.bolt : (gano ? Icons.check : Icons.close),
@@ -913,8 +914,8 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
             padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 20),
             decoration: BoxDecoration(
               color: TemaJuego.fondoPanel,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: color.withOpacity(0.5)),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: color.withOpacity(0.5), width: 2.0),
             ),
             child: Column(
               children: [
@@ -938,14 +939,16 @@ class _TorneoPartidoUsuarioScreenState extends State<TorneoPartidoUsuarioScreen>
           SizedBox(
             width: double.infinity,
             height: 52,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: TemaJuego.rojo,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            child: PanelPincelado(
+              onTap: _finalizar,
+              colorBase: TemaJuego.rojo,
+              colorAcento: Colors.white,
+              corte: 15,
+              grosorBorde: 2.4,
+              child: const Center(
+                child: Text('CONTINUAR EN LA LLAVE',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14.5)),
               ),
-              onPressed: _finalizar,
-              child: const Text('CONTINUAR EN LA LLAVE',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14.5)),
             ),
           ),
         ],
