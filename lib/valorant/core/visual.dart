@@ -32,6 +32,7 @@ const Map<String, String> _fondosGrandePorRareza = {
   'tos2': 'assets/valorant/cartas/carta_tos2.png',
   'flashback': 'assets/valorant/cartas/carta_flashback.png',
   'promesa': 'assets/valorant/cartas/carta_promesa.png',
+  'icono_prime': 'assets/valorant/cartas/carta_icono_prime.png',
 };
 
 const Map<String, String> _fondosMiniPorRareza = {
@@ -41,6 +42,7 @@ const Map<String, String> _fondosMiniPorRareza = {
   'tos2': 'assets/valorant/cartas/carta_tos_mini.png',
   'flashback': 'assets/valorant/cartas/carta_flashback_mini.png',
   'promesa': 'assets/valorant/cartas/carta_promesa_mini.png',
+  'icono_prime': 'assets/valorant/cartas/carta_icono_prime_mini.png',
 };
 
 const String _normalOroGrande = 'assets/valorant/cartas/carta_normal_oro.png';
