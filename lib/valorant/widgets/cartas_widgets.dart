@@ -41,6 +41,7 @@ class CartaWidget extends StatelessWidget {
     'tos2': 'assets/valorant/cartas/carta_tos2.png',
     'flashback': 'assets/valorant/cartas/carta_flashback.png',
     'promesa': 'assets/valorant/cartas/carta_promesa.png',
+    'icono_prime': 'assets/valorant/cartas/carta_icono_prime.png',
   };
 
   static const String _fondoNormalOro = 'assets/valorant/cartas/carta_normal_oro.png';
@@ -65,7 +66,7 @@ class CartaWidget extends StatelessWidget {
 
   String get _rareza => '${jugador['rareza'] ?? 'normal'}'.toLowerCase().replaceAll(' ', '_');
 
-  bool get _esIcono => _rareza == 'icono';
+  bool get _esIcono => _rareza == 'icono' || _rareza == 'icono_prime';
 
   bool get _esHeroe => _rareza == 'heroe';
 
@@ -410,6 +411,7 @@ class CartaMiniWidget extends StatelessWidget {
     'tos2': 'assets/valorant/cartas/carta_tos_mini.png',
     'flashback': 'assets/valorant/cartas/carta_flashback_mini.png',
     'promesa': 'assets/valorant/cartas/carta_promesa_mini.png',
+    'icono_prime': 'assets/valorant/cartas/carta_icono_mini.png'
   };
 
   static const String _fondoNormalOroMini = 'assets/valorant/cartas/carta_normal_oro_mini.png';
@@ -425,7 +427,7 @@ class CartaMiniWidget extends StatelessWidget {
 
   String get _rareza2 => '${jugador['rareza'] ?? 'normal'}'.toLowerCase().replaceAll(' ', '_');
 
-  bool get _esIcono => _rareza2 == 'icono';
+  bool get _esIcono => _rareza2 == 'icono' || _rareza2 == 'icono_prime';
 
   bool get _esHeroe => _rareza2 == 'heroe';
 

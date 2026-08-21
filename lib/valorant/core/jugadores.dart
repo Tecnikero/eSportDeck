@@ -12,7 +12,7 @@ String paisDe(Jugador j) => '${j['pais'] ?? ''}'.trim().toLowerCase();
 String rarezaDe(Jugador j) =>
     '${j['rareza'] ?? 'normal'}'.trim().toLowerCase().replaceAll(' ', '_');
 
-bool esIcono(Jugador j) => rarezaDe(j) == 'icono';
+bool esIcono(Jugador j) => rarezaDe(j) == 'icono' || rarezaDe(j) == 'icono_prime';
 bool esHeroe(Jugador j) => rarezaDe(j) == 'heroe';
 
 int ovrDe(Jugador j) => ((j['ovr'] ?? 0) as num).toInt();
