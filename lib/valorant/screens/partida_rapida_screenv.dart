@@ -113,6 +113,11 @@ class PartidaRapidaScreen extends StatefulWidget {
   State<PartidaRapidaScreen> createState() => _PartidaRapidaScreenState();
 }
 
+// Rol fijo requerido para cada casilla del draft (por posición en pantalla).
+// La última casilla queda libre entre los 4 roles principales.
+const List<String?> _kRolesPorCasilla = ['INI', 'DUE', 'CON', 'CEN', null];
+const List<String> _kRolesPrincipales = ['DUE', 'INI', 'CON', 'CEN'];
+
 class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
   final supabase = Supabase.instance.client;
   final _random = Random();
@@ -162,11 +167,18 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
       final catalogo = await supabase.from('jugadores').select();
       var pool = List<Map<String, dynamic>>.from(catalogo as List);
 
-      final idsEnEquipo = _seleccionados.map((j) => j['id']).toSet();
-      pool.removeWhere((j) => idsEnEquipo.contains(j['id']));
+      final nombresEnEquipo = _seleccionados.map((j) => j['nombre']).toSet();
+      pool.removeWhere((j) => nombresEnEquipo.contains(j['nombre']));
 
-      if (pool.length < 4) {
-        throw Exception('No hay suficientes jugadores en el catálogo.');
+      final rolRequerido = _kRolesPorCasilla[index];
+      if (rolRequerido != null) {
+        pool = pool.where((j) => rolDe(j) == rolRequerido).toList();
+      } else {
+        pool = pool.where((j) => _kRolesPrincipales.contains(rolDe(j))).toList();
+      }
+
+      if (pool.isEmpty) {
+        throw Exception('No hay jugadores disponibles para este rol.');
       }
 
       pool.shuffle(_random);
@@ -185,7 +197,9 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
       setState(() {
         _revelando = false;
         _casillaEnRevelacion = null;
-        _error = 'No se pudieron cargar jugadores del catálogo.';
+        _error = e.toString().contains('para este rol')
+            ? 'No hay jugadores disponibles para este rol.'
+            : 'No se pudieron cargar jugadores del catálogo.';
       });
     }
   }
@@ -198,10 +212,13 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
       isDismissible: false,
       enableDrag: false,
       builder: (context) {
-        return SelectorCartasSheet(
-          opciones: _opcionesActuales,
-          onElegir: (carta) => _elegirCarta(index, carta),
-          quimicaPreview: (carta) => quimicaSiSeElige(carta, _seleccionados),
+        return PopScope(
+          canPop: false,
+          child: SelectorCartasSheet(
+            opciones: _opcionesActuales,
+            onElegir: (carta) => _elegirCarta(index, carta),
+            quimicaPreview: (carta) => quimicaSiSeElige(carta, _seleccionados),
+          ),
         );
       },
     );
@@ -241,10 +258,21 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
     final catalogo = await supabase.from('jugadores').select();
     var pool = List<Map<String, dynamic>>.from(catalogo as List);
     pool.shuffle(_random);
-    if (pool.length < 5) {
-      throw Exception('El catálogo no tiene suficientes jugadores para generar un rival.');
+
+    final rival = <Map<String, dynamic>>[];
+    final nombresUsados = <String>{};
+    for (final jugador in pool) {
+      final nombre = jugador['nombre'] as String;
+      if (nombresUsados.contains(nombre)) continue;
+      nombresUsados.add(nombre);
+      rival.add(jugador);
+      if (rival.length == 5) break;
     }
-    return pool.take(5).toList();
+
+    if (rival.length < 5) {
+      throw Exception('El catálogo no tiene suficientes jugadores distintos para generar un rival.');
+    }
+    return rival;
   }
 
   Future<void> _jugarPartida() async {
@@ -368,7 +396,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
           return ratingB.compareTo(ratingA);
         });
 
-      final monedas = victoria ? 150 : 50;
+      final monedas = victoria ? 1000 : 500;
       await _pagarMonedas(monedas);
 
       if (!mounted) return;
@@ -612,7 +640,7 @@ class _PartidaRapidaScreenState extends State<PartidaRapidaScreen> {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                'Jugador ${index + 1}',
+                                _kRolesPorCasilla[index] ?? 'FLEX',
                                 style: const TextStyle(color: Colors.white38, fontWeight: FontWeight.w600, fontSize: 10.5),
                               ),
                             ],

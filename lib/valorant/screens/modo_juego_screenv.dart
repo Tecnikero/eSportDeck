@@ -3,6 +3,7 @@ import 'partida_rapida_screenv.dart';
 import 'partida_completa_screenv.dart';
 import 'modo_torneo_screenv.dart';
 import '../widgets/panel_pincelado.dart';
+import 'mayor_menor_screenv.dart';
 
 const Color _kFondo = Color(0xFF0B0C10);
 const Color _kFondoProfundo = Color(0xFF060708);
@@ -98,6 +99,19 @@ class ModoJuegoScreen extends StatelessWidget {
                 subtitulo: 'Doble eliminación · Upper & Lower Bracket · Con partidas de 13 rondas',
                 icono: Icons.emoji_events,
                 activo: false,
+              ),
+              const SizedBox(height: 14),
+
+              _tarjetaModo(
+                context: context,
+                titulo: 'OVR & Under',
+                subtitulo: 'Modo de juego especial de apuestas con cartas',
+                icono: Icons.emoji_events,
+                activo: true,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MayorMenorScreen()),
+                ),
               ),
               const SizedBox(height: 14),
             ],

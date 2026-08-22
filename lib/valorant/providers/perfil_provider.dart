@@ -303,11 +303,23 @@ class PerfilProvider extends ChangeNotifier {
     unawaited(_guardarEnDisco(userId));
   }
 
-  void actualizarDinero(int nuevoValor) {
+  Future<void> actualizarDinero(int nuevoValor) async {
+    final anterior = _dinero;
     _dinero = nuevoValor;
     notifyListeners();
     final userId = _supabase.auth.currentUser?.id;
-    if (userId != null) unawaited(_guardarEnDisco(userId));
+    if (userId == null) return;
+
+    unawaited(_guardarEnDisco(userId));
+
+    try {
+      await _supabase.from('profiles').update({'dinero': nuevoValor}).eq('id', userId);
+    } catch (e) {
+      debugPrint('Error al guardar dinero: $e');
+      _dinero = anterior;
+      notifyListeners();
+      if (userId.isNotEmpty) unawaited(_guardarEnDisco(userId));
+    }
   }
 
   // ============================================================================

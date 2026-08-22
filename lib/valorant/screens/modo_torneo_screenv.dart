@@ -6,14 +6,20 @@ import '../widgets/cartas_widgets.dart';
 import '../providers/perfil_provider.dart';
 import 'torneo_partido_screenv.dart';
 import '../core/visual.dart';
+import '../core/mecanicas.dart';
 import '../widgets/panel_pincelado.dart';
 
 const Color _kAzulUpper = Color(0xFF3B82F6);
 const Color _kMoradoLower = Color(0xFF9B59B6);
 
+// Rol fijo requerido para cada casilla del draft de titulares (por posición
+// en pantalla). La última casilla queda libre entre los 4 roles principales.
+const List<String?> _kRolesPorCasilla = ['INI', 'DUE', 'CON', 'INI', null];
+const List<String> _kRolesPrincipales = ['DUE', 'INI', 'CON', 'CEN'];
+
 
 const int _rondasParaGanar = 5;
-const int _premioMonedas = 2500;
+const int _premioMonedas = 3500;
 
 const double _kCardW = 190;
 const double _kCardH = 56;
@@ -115,6 +121,14 @@ class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
   List<Map<String, dynamic>> get _titulares =>
       _casillas.whereType<Map<String, dynamic>>().toList();
 
+  String rolDe(Map<String, dynamic> carta) {
+    final rol = (carta['rol'] ?? carta['role'] ?? carta['posicion'] ?? 'CEN')
+        .toString()
+        .trim()
+        .toUpperCase();
+    return rol.isEmpty ? 'CEN' : rol;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -173,14 +187,21 @@ class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
       _error = null;
     });
 
-    final idsEnEquipo = _titulares.map((c) => c['id']).toSet();
-    final pool = _inventario.where((c) => !idsEnEquipo.contains(c['id'])).toList();
+    final nombresEnEquipo = _titulares.map((c) => c['nombre']).toSet();
+    var pool = _inventario.where((c) => !nombresEnEquipo.contains(c['nombre'])).toList();
 
-    if (pool.length < 4) {
+    final rolRequerido = _kRolesPorCasilla[index];
+    if (rolRequerido != null) {
+      pool = pool.where((c) => rolDe(c) == rolRequerido).toList();
+    } else {
+      pool = pool.where((c) => _kRolesPrincipales.contains(rolDe(c))).toList();
+    }
+
+    if (pool.isEmpty) {
       setState(() {
         _revelando = false;
         _casillaEnRevelacion = null;
-        _error = 'No tienes suficientes cartas distintas en tu colección.';
+        _error = 'No tienes cartas de rol ${rolRequerido ?? "libre"} en tu colección.';
       });
       return;
     }
@@ -207,9 +228,12 @@ class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
       isDismissible: false,
       enableDrag: false,
       builder: (context) {
-        return _SelectorCartasTorneoSheet(
-          opciones: _opcionesActuales,
-          onElegir: (carta) => _elegirCarta(index, carta),
+        return PopScope(
+          canPop: false,
+          child: _SelectorCartasTorneoSheet(
+            opciones: _opcionesActuales,
+            onElegir: (carta) => _elegirCarta(index, carta),
+          ),
         );
       },
     );
@@ -362,7 +386,7 @@ class _TorneoDraftScreenState extends State<TorneoDraftScreen> {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                'Jugador ${index + 1}',
+                                _kRolesPorCasilla[index] ?? 'FLEX',
                                 style: const TextStyle(color: Colors.white38, fontWeight: FontWeight.w600, fontSize: 10.5),
                               ),
                             ],
@@ -533,8 +557,18 @@ class _TorneoBracketScreenState extends State<TorneoBracketScreen> {
       var pool = List<Map<String, dynamic>>.from(catalogo as List);
       pool.shuffle(_random);
 
+      // Nos quedamos con una sola carta por jugador (nombre) para que
+      // ningún equipo termine con dos cartas de la misma persona.
+      final nombresUsados = <String>{};
+      pool = pool.where((j) {
+        final nombre = j['nombre'] as String;
+        if (nombresUsados.contains(nombre)) return false;
+        nombresUsados.add(nombre);
+        return true;
+      }).toList();
+
       if (pool.length < 35) {
-        throw Exception('El catálogo no tiene suficientes jugadores para armar el torneo.');
+        throw Exception('El catálogo no tiene suficientes jugadores distintos para armar el torneo.');
       }
 
       _equipoUsuario = _Equipo(nombre: 'TU EQUIPO', jugadores: widget.titulares, esUsuario: true);

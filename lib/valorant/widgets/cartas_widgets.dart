@@ -51,7 +51,8 @@ class CartaWidget extends StatelessWidget {
   String get _rutaFondo {
     final rareza = '${jugador['rareza'] ?? 'normal'}'.toLowerCase().replaceAll(' ', '_');
     if (rareza == 'normal') {
-      final ovr = (jugador['ovr'] ?? 0) as num;
+      final ovrRaw = jugador['ovr'];
+      final ovr = ovrRaw is num ? ovrRaw : (num.tryParse('$ovrRaw') ?? 0);
       return ovr >= _umbralOvrOro ? _fondoNormalOro : _fondoNormalPlata;
     }
     return _fondosPorRareza[rareza] ?? _fondoNormalPlata;
@@ -442,7 +443,8 @@ class CartaMiniWidget extends StatelessWidget {
   String get _rutaFondo {
     final rareza = '${jugador['rareza'] ?? 'normal'}'.toLowerCase().replaceAll(' ', '_');
     if (rareza == 'normal') {
-      final ovr = (jugador['ovr'] ?? 0) as num;
+      final ovrRaw = jugador['ovr'];
+      final ovr = ovrRaw is num ? ovrRaw : (num.tryParse('$ovrRaw') ?? 0);
       return ovr >= _umbralOvrOro ? _fondoNormalOroMini : _fondoNormalPlataMini;
     }
     return _fondosPorRareza[rareza] ?? _fondoNormalPlataMini;

@@ -131,6 +131,7 @@ class _SobreDetalleScreenState extends State<SobreDetalleScreen>
     'tos2': 'assets/valorant/cartas/carta_tos2.png',
     'flashback': 'assets/valorant/cartas/carta_flashback.png',
     'promesa': 'assets/valorant/cartas/carta_promesa.png',
+    'icono_prime': 'assets/valorant/cartas/carta_icono_prime.png',
   };
 
   String _rutaFondoParaCarta(Map<String, dynamic> jugador) {
